@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg-base: #030303;
+  --color-bg-surface: rgba(23, 23, 23, 0.7);
+  --color-bg-elevated: rgba(38, 38, 38, 0.8);
+
+  --color-accent-primary: #D946EF;
+  --color-accent-secondary: #8B5CF6;
+
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-bg-base)] text-zinc-100 font-sans antialiased;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl border border-white/10 bg-white/5;
+  }
+
+  .glass-dark {
+    @apply backdrop-blur-2xl border border-white/5 bg-black/40;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-r from-fuchsia-500 to-violet-500;
+  }
+
+  .cosmic-glow {
+    box-shadow: 0 0 40px -10px rgba(217, 70, 239, 0.3);
+  }
+
+  /* Remove scrollbar for clean look */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom animation for page transitions */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

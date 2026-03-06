@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nura AI - Master Anything</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.png" type="image/png">
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="Nura AI - Master Anything">
+    <meta property="og:description"
+        content="Upload any document, link, or media and generate interactive study notes, flashcards, quizzes, and podcasts instantly with AI.">
+    <meta property="og:image" content="/og-image.jpg">
+    <meta property="og:url" content="https://vandalmejri-dotcom.github.io/nura-ai-/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Nura AI - Master Anything">
+    <meta name="twitter:description"
+        content="Upload any document, link, or media and generate interactive study notes, flashcards, quizzes, and podcasts instantly with AI.">
+    <meta name="twitter:image" content="/og-image.jpg">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons (Phosphor Icons for sleek outline look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="ph-bold ph-brain" style="font-size: 28px; color: var(--accent-primary);"></i>
+                Nura AI
+            </div>
+
+            <nav class="nav-menu">
+                <a class="nav-item active" data-view="dashboard">
+                    <i class="ph ph-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-item" data-view="study-sets">
+                    <i class="ph ph-books"></i>
+                    <span>Study Sets</span>
+                </a>
+                <a class="nav-item" data-view="tutor">
+                    <i class="ph ph-robot"></i>
+                    <span>AI Tutor</span>
+                </a>
+                <a class="nav-item" data-view="progress">
+                    <i class="ph ph-chart-line-up"></i>
+                    <span>Progress</span>
+                </a>
+                <div style="flex-grow: 1;"></div>
+                <a class="nav-item" data-view="settings">
+                    <i class="ph ph-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">ih</div>
+                <span>ihssen</span>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- 1. DASHBOARD VIEW -->
+            <section id="view-dashboard" class="view active">
+                <div class="welcome-header">
+                    <h1>Hey ihssen, what do you wanna master?</h1>
+                    <p class="subtitle">Upload anything and get interactive notes, flashcards, quizzes, and more</p>
+                </div>
+
+                <div class="upload-options">
+                    <button class="upload-btn" onclick="UI.openUploadModal('file')">
+                        <i class="ph ph-upload-simple"></i>
+                        <span class="btn-title">Upload</span>
+                        <span class="btn-desc">Image, file, audio, video</span>
+                    </button>
+                    <button class="upload-btn" onclick="UI.openUploadModal('link')">
+                        <i class="ph ph-link"></i>
+                        <span class="btn-title">Paste</span>
+                        <span class="btn-desc">YouTube, website, text</span>
+                    </button>
+                    <button class="upload-btn" onclick="UI.openUploadModal('record')">
+                        <i class="ph ph-microphone"></i>
+                        <span class="btn-title">Record</span>
+                        <span class="btn-desc">Record live lecture</span>
+                    </button>
+                </div>
+
+                <div class="study-sets-section">
+                    <div class="section-header">
+                        <h2>All Study Sets</h2>
+                        <div class="section-divider"></div>
+                    </div>
+
+                    <div id="empty-state" class="empty-state">
+                        <i class="ph-duotone ph-books"></i>
+                        <h3>No study sets yet</h3>
+                        <p>Upload a file to get started and generate study materials.</p>
+                    </div>
+
+                    <div id="study-sets-grid" class="study-sets-grid" style="display: none;">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. STUDY SET DETAILS VIEW (Inside a Set) -->
+            <section id="view-set-details" class="view">
+                <div class="details-header">
+                    <button class="back-link" onclick="UI.switchView('dashboard')">
+                        <i class="ph ph-arrow-left"></i> Back to Dashboard
+                    </button>
+                    <div class="set-title-row">
+                        <h1 id="set-details-title">Study Set Title</h1>
+                        <div class="set-actions">
+                            <button class="icon-btn" title="Rename"><i class="ph ph-pencil-simple"></i></button>
+                            <button class="icon-btn danger" title="Delete" id="delete-set-btn"><i
+                                    class="ph ph-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="set-meta">
+                        <span class="badge" id="set-details-source">Source Name</span>
+                        <span class="meta-date" id="set-details-date">Today at 10:00 AM</span>
+                    </div>
+
+                    <!-- Tabs inside Study Set -->
+                    <div class="set-tabs">
+                        <button class="tab-btn active" data-tab="content">
+                            <i class="ph ph-file-text"></i> Content
+                        </button>
+                        <button class="tab-btn" data-tab="notes">
+                            <i class="ph-bold ph-notebook"></i> Notes
+                        </button>
+                        <button class="tab-btn" data-tab="quiz">
+                            <i class="ph-bold ph-list-numbers"></i> Multiple Choice
+                        </button>
+                        <button class="tab-btn" data-tab="flashcards">
+                            <i class="ph-bold ph-cards"></i> Flashcards
+                        </button>
+                        <button class="tab-btn" data-tab="podcast">
+                            <i class="ph-bold ph-headphones"></i> Podcast
+                        </button>
+                        <button class="tab-btn" data-tab="tutorlesson">
+                            <i class="ph-bold ph-graduation-cap"></i> Tutor Lesson
+                        </button>
+                        <button class="tab-btn" data-tab="writtentests">
+                            <i class="ph-bold ph-clipboard-text"></i> Written Tests
+                        </button>
+                        <button class="tab-btn" data-tab="fillintheblanks">
+                            <i class="ph-bold ph-text-aa"></i> Fill in the Blanks
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tab-content-container">
+                    <!-- CONTENT TAB -->
+                    <div id="tab-content" class="tab-pane active">
+                        <div class="content-reader card">
+                            <h3 class="reader-title">Source Document</h3>
+                            <div class="reader-body" id="reader-content">
+                                <!-- Raw file content goes here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FLASHCARDS TAB -->
+                    <div id="tab-flashcards" class="tab-pane set-flashcard-pane">
+                        <div class="flashcard-toolbar">
+                            <div class="progress-pill">
+                                <span id="fc-progress-text">Card 1 / 10</span>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="fc-progress-fill" style="width: 10%;"></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline" onclick="StudyMode.resetFlashcards()">
+                                <i class="ph ph-arrows-clockwise"></i> Reset Progress
+                            </button>
+                        </div>
+
+                        <div class="flashcard-scene" id="flashcard-scene" onclick="StudyMode.flipCard()">
+                            <div class="flashcard" id="flashcard">
+                                <div class="card-face front">
+                                    <div class="card-label">Question</div>
+                                    <div class="card-text" id="fc-front"></div>
+                                </div>
+                                <div class="card-face back">
+                                    <div class="card-label">Answer</div>
+                                    <div class="card-text" id="fc-back"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flashcard-nav">
+                            <button class="icon-btn-lg" onclick="StudyMode.prevCard()"><i
+                                    class="ph ph-caret-left"></i></button>
+                            <button class="btn btn-primary" onclick="StudyMode.flipCard()">Flip Card</button>
+                            <button class="icon-btn-lg" onclick="StudyMode.nextCard()"><i
+                                    class="ph ph-caret-right"></i></button>
+                        </div>
+
+                        <div class="flashcard-raters">
+                            <button class="rater-btn unfamiliar" onclick="StudyMode.rateCard('unfamiliar')">
+                                <span class="emoji">😔</span> Unfamiliar
+                            </button>
+                            <button class="rater-btn learning" onclick="StudyMode.rateCard('learning')">
+                                <span class="emoji">🤔</span> Learning
+                            </button>
+                            <button class="rater-btn familiar" onclick="StudyMode.rateCard('familiar')">
+                                <span class="emoji">😊</span> Familiar
+                            </button>
+                            <button class="rater-btn mastered" onclick="StudyMode.rateCard('mastered')">
+                                <span class="emoji">⭐</span> Mastered
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- QUIZ TAB -->
+                    <div id="tab-quiz" class="tab-pane">
+                        <div class="quiz-container">
+                            <div class="quiz-progress">
+                                <span id="quiz-question-counter">Question 1 of 5</span>
+                            </div>
+                            <div class="quiz-card card" id="quiz-card">
+                                <!-- Rendered by JS -->
+                            </div>
+                            <div class="quiz-nav">
+                                <button class="btn btn-outline" id="quiz-prev-btn" onclick="QuizMode.prevQuestion()"
+                                    disabled>Previous</button>
+                                <button class="btn btn-primary" id="quiz-next-btn"
+                                    onclick="QuizMode.nextQuestion()">Next Question</button>
+                                <button class="btn btn-success" id="quiz-finish-btn" onclick="QuizMode.finishQuiz()"
+                                    style="display: none;">Finish Quiz</button>
+                            </div>
+                        </div>
+                        <div class="quiz-results card" id="quiz-results" style="display: none; text-align: center;">
+                            <h2>Quiz Complete! 🎉</h2>
+                            <p id="quiz-score-display"
+                                style="font-size: 48px; font-weight: 700; margin: 20px 0; color: var(--accent-primary);">
+                                80%</p>
+                            <p id="quiz-feedback-text">Great job! You've mastered most of these concepts.</p>
+                            <button class="btn btn-primary mt-4" onclick="QuizMode.startQuiz()">Retake Quiz</button>
+                        </div>
+                    </div>
+
+                    <!-- NOTES TAB -->
+                    <div id="tab-notes" class="tab-pane">
+                        <div class="notes-container card">
+                            <div class="notes-header">
+                                <h3>📝 Cornell Study Notes</h3>
+                                <button class="btn btn-sm btn-outline"><i class="ph ph-download"></i> Export</button>
+                            </div>
+                            <div class="notes-body" id="notes-content">
+                                <!-- Rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PODCAST TAB -->
+                    <div id="tab-podcast" class="tab-pane">
+                        <div class="podcast-container card" style="text-align: center; padding: 60px 20px;">
+                            <i class="ph-fill ph-headphones"
+                                style="font-size: 64px; color: var(--accent-primary); margin-bottom: 24px;"></i>
+                            <h3>Audio Podcast Ready</h3>
+                            <p style="color: var(--text-secondary); max-width: 400px; margin: 16px auto;">The AI has
+                                generated a conversational podcast script. Press play to listen or read the full
+                                dialogue below.</p>
+                            <button class="btn btn-primary mt-4"><i class="ph-fill ph-play-circle"></i> Play Podcast
+                                Episode</button>
+                            <div id="podcast-content"
+                                style="text-align: left; margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TUTOR LESSON TAB -->
+                    <div id="tab-tutorlesson" class="tab-pane">
+                        <div class="card" id="tutorlesson-content">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- WRITTEN TESTS TAB -->
+                    <div id="tab-writtentests" class="tab-pane">
+                        <div class="card" id="writtentests-content">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- FILL IN THE BLANKS TAB -->
+                    <div id="tab-fillintheblanks" class="tab-pane">
+                        <div class="card" id="fillintheblanks-content">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. AI TUTOR VIEW -->
+            <section id="view-tutor" class="view">
+                <div class="view-header">
+                    <h1>AI Tutor</h1>
+                    <p class="subtitle">Ask any question about your study materials.</p>
+                </div>
+
+                <div class="chat-container card">
+                    <div class="chat-context-selector">
+                        <label>Focus conversation on:</label>
+                        <select id="chat-context-select" class="dropdown">
+                            <option value="">General (No specific document)</option>
+                            <!-- Options injected by JS -->
+                        </select>
+                    </div>
+
+                    <div class="chat-history" id="chat-history">
+                        <div class="chat-msg ai">
+                            <div class="msg-avatar"><i class="ph-fill ph-robot"></i></div>
+                            <div class="msg-bubble">
+                                Hello! I'm your Nura AI Tutor. Select a document from the dropdown above and ask me
+                                anything about it.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area">
+                        <textarea id="chat-input" placeholder="Ask a question..." rows="1"
+                            onkeydown="Tutor.handleEnter(event)"></textarea>
+                        <button class="send-btn" onclick="Tutor.sendMessage()"><i
+                                class="ph-fill ph-paper-plane-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. PROGRESS VIEW -->
+            <section id="view-progress" class="view">
+                <div class="view-header">
+                    <h1>Your Mastery Journey</h1>
+                    <p class="subtitle">Track your aggregated statistics across all study sets.</p>
+                </div>
+                <div class="progress-dashboard card">
+                    <div class="global-stats-grid">
+                        <div class="stat-box">
+                            <div class="sb-label">Total Sets</div>
+                            <div class="sb-value" id="prog-total-sets">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="sb-label">Total Cards</div>
+                            <div class="sb-value" id="prog-total-cards">0</div>
+                        </div>
+                        <div class="stat-box mastering">
+                            <div class="sb-label">Cards Mastered</div>
+                            <div class="sb-value" id="prog-mastered-cards">0</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. SETTINGS VIEW -->
+            <section id="view-settings" class="view">
+                <div class="view-header">
+                    <h1>Settings</h1>
+                    <p class="subtitle">Manage APIs and preferences.</p>
+                </div>
+
+                <div class="settings-card card">
+                    <h3>LLM Provider Settings</h3>
+                    <p class="settings-desc">Update your Gemini API key dynamically. This is validated directly with the
+                        backend.</p>
+
+                    <div class="form-group">
+                        <label for="gemini-api-key">Gemini API Key</label>
+                        <div class="input-row">
+                            <input type="password" id="gemini-api-key" placeholder="AIzaSy...">
+                            <button class="btn btn-primary" onclick="Settings.saveKey()">Save Key</button>
+                        </div>
+                        <small class="hint">Your key is processed temporarily by the local server.</small>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label>Provider Status</label>
+                        <div class="status-panel" id="provider-status-panel">
+                            Checking status...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card card danger-zone mt-4">
+                    <h3>Danger Zone</h3>
+                    <p class="settings-desc">Clear all stored study data from this browser.</p>
+                    <button class="btn btn-danger" onclick="Settings.clearAllData()">Reset All Local Data</button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Global Upload Modal (Drag & Drop) -->
+    <div class="modal-overlay" id="upload-modal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="UI.closeModal()"><i class="ph ph-x"></i></button>
+            <div class="modal-header">
+                <h2 id="upload-modal-title">Please upload your file</h2>
+                <p>We will turn your file into insane study material</p>
+            </div>
+            <div class="modal-body" id="upload-stage-1">
+                <!-- Dropzone -->
+                <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+                    <i class="ph ph-upload-simple dz-icon"></i>
+                    <p class="dz-text">Click to upload or drag and drop up to 10 files</p>
+                    <p class="dz-subtext">Image, PDF, Word, PowerPoint, Audio, or Video files</p>
+                    <p class="dz-subtext" style="color:var(--accent-primary); margin-top: 8px;">(PDF, DOCX, TXT
+                        supported by local backend)</p>
+                </div>
+                <input type="file" id="file-input" style="display: none" accept=".txt,.csv,.md,.pdf,.docx">
+
+                <!-- URL / Content Input (Hidden by default based on type) -->
+                <div class="url-input-zone" id="url-input-zone" style="display:none;">
+                    <label>Enter a YouTube/Website URL</label>
+                    <div class="url-input-wrap">
+                        <i class="ph ph-link"></i>
+                        <input type="text" id="url-input-field" placeholder="https://youtu.be/dQw4w9WgXcQ">
+                    </div>
+
+                    <div class="separator"><span>or</span></div>
+
+                    <label>Copy and paste text to add as content</label>
+                    <textarea class="raw-text-input" id="raw-text-field" placeholder="Paste your notes here..."
+                        rows="5"></textarea>
+                </div>
+
+                <!-- Audio Record (Hidden) -->
+                <div class="record-zone" id="record-zone" style="display:none; text-align:center; padding: 40px 0;">
+                    <button class="record-btn-huge"><i class="ph-fill ph-microphone"></i></button>
+                    <h3>Ready to Record</h3>
+                    <p>Click the microphone to start recording</p>
+                </div>
+            </div>
+
+            <!-- STAGE 2: Options Selection -->
+            <div class="modal-body" id="upload-stage-2" style="display: none; text-align: center;">
+                <div class="options-grid">
+                    <button class="option-btn active" data-option="notes">
+                        <div class="opt-icon-box"><i class="ph-bold ph-check"></i></div>
+                        Notes
+                    </button>
+                    <button class="option-btn active" data-option="quiz">
+                        <div class="opt-icon-box"><i class="ph-bold ph-check"></i></div>
+                        Multiple Choice
+                    </button>
+                    <button class="option-btn active" data-option="flashcards">
+                        <div class="opt-icon-box"><i class="ph-bold ph-check"></i></div>
+                        Flashcards
+                    </button>
+                    <button class="option-btn" data-option="podcast">
+                        <div class="opt-icon-box"><i class="ph-bold ph-headphones" style="color: #F97316;"></i></div>
+                        Podcast
+                    </button>
+                    <button class="option-btn" data-option="tutorlesson">
+                        <div class="opt-icon-box"><i class="ph-bold ph-graduation-cap" style="color: #F97316;"></i>
+                        </div>
+                        Tutor Lesson
+                    </button>
+                    <button class="option-btn" data-option="writtentests">
+                        <div class="opt-icon-box"><i class="ph-bold ph-clipboard-text" style="color: #EF4444;"></i>
+                        </div>
+                        Written Tests
+                    </button>
+                    <button class="option-btn active" data-option="fillintheblanks">
+                        <div class="opt-icon-box"><i class="ph-bold ph-check"></i></div>
+                        Fill in the Blanks
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-footer-row" id="footer-stage-2" style="display: none; padding-bottom: 16px;">
+                    <select class="lang-select" id="generation-language">
+                        <option value="en">US English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width:100%" id="modal-next-btn">Next</button>
+                <button class="btn btn-primary"
+                    style="width:100%; display: none; background-color: var(--accent-primary);"
+                    id="modal-generate-btn">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analyzing Overlay -->
+    <div class="loading-overlay" id="analyzing-overlay">
+        <div class="loading-box">
+            <div class="spinner-ring"></div>
+            <h3>Analyzing with AI... 🧠</h3>
+            <p id="analyzing-step" class="analyzing-step">Parsing document context...</p>
+            <div class="loading-progress">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Confirm Modal -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-box small">
+            <h2 id="confirm-title">Are you sure?</h2>
+            <p id="confirm-desc">This action cannot be undone.</p>
+            <div class="modal-actions-row mt-4">
+                <button class="btn btn-outline" onclick="UI.closeConfirm()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-yes-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
