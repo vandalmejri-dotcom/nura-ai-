@@ -34,14 +34,14 @@ app.use(express.static(path.join(__dirname)));
 // Mount API routes
 app.use('/api', apiRoutes);
 
-// Catch-all: send dashboard for any unknown route (Express 5 compatible)
+// Catch-all: send index for any unknown route (Express 5 compatible)
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'dashboard.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Nura AI Server running at http://localhost:${PORT}`);
-    console.log(`   Dashboard → http://localhost:${PORT}/dashboard.html`);
+    console.log(`   App → http://localhost:${PORT}/index.html`);
     console.log(`   Gemini key present: ${!!process.env.GEMINI_API_KEY}`);
     console.log('');
 });
