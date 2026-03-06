@@ -1,0 +1,5 @@
+This is a simple test file.
+It contains some text to test the study set generation.
+Testing 1 2 3.
+It needs at least 5 letters per word.
+This should be enough to extract some keywords and generate the cards.
