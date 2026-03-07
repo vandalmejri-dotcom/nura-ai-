@@ -21,6 +21,22 @@ export async function parseDOCX(buffer: Buffer): Promise<string> {
 
 export async function fetchYouTubeTranscript(url: string): Promise<string> {
     try {
+        // Attempt external transcript extraction API (e.g. transcriptapi.com) if configured
+        if (process.env.TRANSCRIPT_API_KEY) {
+            try {
+                const res = await fetch(`https://transcriptapi.com/api/v1/youtube?url=${encodeURIComponent(url)}`, {
+                    headers: { 'Authorization': `Bearer ${process.env.TRANSCRIPT_API_KEY}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.transcript;
+                }
+            } catch (proxyError) {
+                console.warn('Proxy API failed, adhering to fallback mechanism:', proxyError);
+            }
+        }
+
+        // Fallback to primary internal extraction utility
         const transcript = await YoutubeTranscript.fetchTranscript(url);
         if (!transcript || transcript.length === 0) {
             throw new Error('No transcript available for this video.');
@@ -36,8 +52,8 @@ export async function fetchYouTubeTranscript(url: string): Promise<string> {
     } catch (error: any) {
         console.error('YouTube Fetch Error:', error.message);
         if (error.message.includes('Too Many Requests') || error.message.includes('429')) {
-            throw new Error('YouTube is temporarily blocking requests. Try a raw text paste or different URL.');
+            throw new Error('YouTube is temporarily blocking requests due to Vercel Datacenter ASNs. Please use a text snippet or configure TRANSCRIPT_API_KEY.');
         }
-        throw new Error('Could not retrieve transcript. Ensure the video is public and has captions enabled.');
+        throw new Error('Could not retrieve transcript. Ensure the video is public and has captions enabled (TranscriptsDisabled state).');
     }
 }

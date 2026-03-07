@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -160,10 +161,33 @@ export default function StudySetDetail() {
 function FlashcardPlayer({ cards }: { cards: any[] }) {
     const [index, setIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     if (!cards.length) return <div>No cards generated for this mission.</div>;
 
     const current = cards[index];
+
+    const handleMasteryFeedback = async (quality: number) => {
+        setSyncing(true);
+        try {
+            await fetch('/api/spaced-repetition', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    artifactId: current.id || `local_card_${index}`,
+                    quality
+                })
+            });
+        } catch (error) {
+            console.error('Failed to sync mastery data:', error);
+        } finally {
+            setSyncing(false);
+            if (index < cards.length - 1) {
+                setIndex(index + 1);
+                setIsFlipped(false);
+            }
+        }
+    };
 
     return (
         <div className="w-full max-w-2xl space-y-10">
@@ -179,9 +203,17 @@ function FlashcardPlayer({ cards }: { cards: any[] }) {
                         <div className="absolute bottom-10 text-xs text-zinc-500 italic opacity-0 group-hover:opacity-100 transition-opacity">Click to Reveal Synthesis</div>
                     </div>
                     {/* Back */}
-                    <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-fuchsia-500/20 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-                        <span className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest mb-6 italic">Synthesized Insight</span>
-                        <div className="text-xl font-medium text-zinc-100 leading-relaxed">{current.back || current.answer}</div>
+                    <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-fuchsia-500/20 rounded-3xl p-10 flex flex-col items-center justify-between text-center">
+                        <span className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest italic">Synthesized Insight</span>
+                        <div className="text-xl font-medium text-zinc-100 leading-relaxed overflow-y-auto no-scrollbar my-4">{current.back || current.answer}</div>
+
+                        {/* Spaced Repetition Controls */}
+                        <div className="grid grid-cols-4 w-full gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                            <button disabled={syncing} onClick={() => handleMasteryFeedback(0)} className="py-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-xs uppercase transition-colors">Forgot</button>
+                            <button disabled={syncing} onClick={() => handleMasteryFeedback(1)} className="py-2.5 rounded-xl bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold text-xs uppercase transition-colors">Hard</button>
+                            <button disabled={syncing} onClick={() => handleMasteryFeedback(2)} className="py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold text-xs uppercase transition-colors">Good</button>
+                            <button disabled={syncing} onClick={() => handleMasteryFeedback(3)} className="py-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 font-bold text-xs uppercase transition-colors">Easy</button>
+                        </div>
                     </div>
                 </div>
             </div>

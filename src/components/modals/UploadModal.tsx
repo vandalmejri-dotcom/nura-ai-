@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     X,
     UploadSimple,
@@ -9,9 +9,11 @@ import {
     Sparkle,
     Check,
     CircleNotch,
-    Warning
+    Warning,
+    FilePdf
 } from '@phosphor-icons/react';
 import { upload } from '@vercel/blob/client';
+import { useDropzone } from 'react-dropzone';
 
 interface UploadModalProps {
     isOpen: boolean;
@@ -31,7 +33,45 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState('');
 
+    const onDrop = React.useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles && acceptedFiles[0]) {
+            setSelectedFile(acceptedFiles[0]);
+            setStep('options');
+        }
+    }, []);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'application/pdf': ['.pdf'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+            'text/plain': ['.txt']
+        },
+        maxFiles: 1
+    });
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const reset = () => {
+        setStep('type');
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setLink('');
+        setRawText('');
+        setOptions(['flashcards', 'quiz', 'notes']);
+        setProgress(0);
+        setError('');
+    };
+
+    // Strict React state isolation & cleanup routine
+    useEffect(() => {
+        if (!isOpen) reset();
+    }, [isOpen]);
+
+    // Cleanup state specifically when switching modalities mid-action
+    useEffect(() => {
+        setError('');
+    }, [step]);
 
     if (!isOpen) return null;
 
@@ -69,6 +109,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 const blob = await upload(selectedFile.name, selectedFile, {
                     access: 'public',
                     handleUploadUrl: '/api/upload/blob',
+                    clientPayload: JSON.stringify({ timestamp: Date.now(), filename: selectedFile.name }),
                     onUploadProgress: (progressEvent) => {
                         setProgress(Math.round(progressEvent.percentage * 0.8)); // 80% for upload
                     },
@@ -106,15 +147,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         }
     };
 
-    const reset = () => {
-        setStep('type');
-        setSelectedFile(null);
-        setLink('');
-        setRawText('');
-        setOptions(['flashcards', 'quiz', 'notes']);
-        setProgress(0);
-        setError('');
-    };
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
@@ -141,19 +174,21 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 <div className="p-8">
                     {step === 'type' && (
                         <div className="grid grid-cols-1 gap-4">
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-fuchsia-500/30 hover:bg-white/10 transition-all text-left group"
+                            <div
+                                {...getRootProps()}
+                                className={`flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${isDragActive
+                                        ? 'border-fuchsia-500 bg-fuchsia-500/10'
+                                        : 'border-white/10 hover:border-fuchsia-500/30 hover:bg-white/5'
+                                    }`}
                             >
-                                <div className="p-3 rounded-xl bg-zinc-800 text-zinc-400 group-hover:text-fuchsia-400 transition-colors">
-                                    <UploadSimple size={24} weight="bold" />
+                                <input {...getInputProps()} />
+                                <div className={`p-4 rounded-xl mb-4 transition-colors ${isDragActive ? 'bg-fuchsia-500 text-white' : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                    <UploadSimple size={32} weight="bold" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold">Upload File</h3>
-                                    <p className="text-sm text-zinc-500">PDF, Word, or Text documents</p>
-                                </div>
-                            </button>
-                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" />
+                                <h3 className="font-bold text-lg mb-1">{isDragActive ? 'Drop file here' : 'Drag & Drop File'}</h3>
+                                <p className="text-sm text-zinc-500">or click to browse PDF, Word, or Text docs</p>
+                            </div>
 
                             <button
                                 onClick={() => setStep('link')}

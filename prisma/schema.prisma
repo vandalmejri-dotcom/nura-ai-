@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  studySets StudySet[]
+}
+
+model StudySet {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  userId      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materials   StudyMaterial[]
+  artifacts   PedagogicalArtifact[]
+}
+
+model StudyMaterial {
+  id          String   @id @default(cuid())
+  sourceName  String
+  content     String   @db.Text
+  url         String?
+  studySetId  String
+  createdAt   DateTime @default(now())
+
+  studySet    StudySet @relation(fields: [studySetId], references: [id], onDelete: Cascade)
+}
+
+enum ArtifactType {
+  FLASHCARD
+  QUIZ
+  CLOZE
+  NOTE
+}
+
+model PedagogicalArtifact {
+  id                 String       @id @default(cuid())
+  studySetId         String
+  type               ArtifactType
+  
+  // JSON payload defining the actual content (e.g. front/back for flashcard, question/options for quiz)
+  contentPayload     Json
+
+  // Spaced Repetition Mastery Context
+  masteryLevel       Int          @default(0) // 0 = Unfamiliar, 1 = Learning, 2 = Familiar, 3 = Mastered
+  nextReviewDate     DateTime     @default(now())
+  easeFactor         Float        @default(2.5)
+  consecutiveCorrect Int          @default(0)
+
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  studySet           StudySet     @relation(fields: [studySetId], references: [id], onDelete: Cascade)
+}

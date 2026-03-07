@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // Removed output: 'standalone' to prioritize Vercel's native serverless deployment architecture
   /* config options here */
 };
 

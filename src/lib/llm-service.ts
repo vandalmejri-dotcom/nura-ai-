@@ -258,17 +258,27 @@ export const generateStudySet = async (fileName: string, fileContent: string, op
         hasQuiz = true;
     }
 
-    let pFormat = '{';
-    if (hasFlashcards) pFormat += '\n  "flashcards": [{"id": 0, "front": "Question/Term", "back": "Detailed explanation"}],';
-    if (hasQuiz) pFormat += '\n  "quiz": [{"id": "q_0", "question": "Deep multiple choice?", "options": ["A", "B", "C", "D"], "correctAnswer": "A"}],';
-    if (hasNotes) pFormat += '\n  "notes": "# Cornell Notes Title\\n\\n## Cues\\n- Cue 1\\n\\n## Notes\\nDetailed notes with markdown formatting and bullet points.",';
-    if (hasPodcast) pFormat += '\n  "podcast": "**Host 1:** Script...",';
-    if (hasTutorLesson) pFormat += '\n  "tutorLesson": "## Lesson...",';
-    if (hasWrittenTests) pFormat += '\n  "writtenTests": "## Test...",';
-    if (hasFillInTheBlanks) pFormat += '\n  "fillInTheBlanks": "... ____ ... (Answer: ...)",';
-    pFormat += '\n  "stats": {"cardCount": 10, "quizCount": 5}\n}';
+    let schemaProps: string[] = [];
+    if (hasFlashcards) schemaProps.push(`"flashcards": [{"front": "Atomic term/question (testing ONE concept)", "back": "Concise answer"}]`);
+    if (hasQuiz) schemaProps.push(`"quiz": [{"question": "Atomic multiple choice question", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "rationale": "Scientific rationale for the answer"}]`);
+    if (hasNotes) schemaProps.push(`"notes": "# Cornell Notes Title\\n\\n## Cues\\n- Cue 1\\n\\n## Notes\\nDetailed notes with markdown formatting and bullet points."`);
+    if (hasPodcast) schemaProps.push(`"podcast": "**Host 1:** Script..."`);
+    if (hasTutorLesson) schemaProps.push(`"tutorLesson": "## Lesson..."`);
+    if (hasWrittenTests) schemaProps.push(`"writtenTests": "## Test..."`);
+    if (hasFillInTheBlanks) schemaProps.push(`"fillInTheBlanks": "... ____ ... (Answer: ...)"`);
 
-    const prompt = `You are an expert teacher. Generate a study set in ${langStr} from: ${fileName}\n\nContent:\n${fileContent.substring(0, 20000)}\n\nCRITICAL: NO LaTeX. Plain text math only.\n\nRequired sections:\n${hasFlashcards ? '- Flashcards' : ''}\n${hasQuiz ? '- Quiz' : ''}\n${hasNotes ? '- Notes' : ''}\n${hasPodcast ? '- Podcast script' : ''}\n${hasTutorLesson ? '- Tutor Lesson' : ''}\n${hasWrittenTests ? '- Written Tests' : ''}\n${hasFillInTheBlanks ? '- Fill in the Blanks' : ''}\n\nOutput strict JSON:\n${pFormat}`;
+    const pFormat = `{\n  ${schemaProps.join(',\n  ')},\n  "stats": {"cardCount": 10, "quizCount": 5}\n}`;
+
+    const prompt = `You are an expert pedagogical AI. Generate a study set in ${langStr} from: ${fileName}
+
+Content:
+${fileContent.substring(0, 20000)}
+
+CRITICAL CONSTRAINTS FOR SPACED REPETITION:
+1. NO LaTeX. Plain text math only.
+2. ATOMICITY: Every flashcard and quiz question MUST test a single, isolated fact. NEVER create compound questions that test multiple discrete facts simultaneously.
+3. OUTPUT STRICT JSON matching this exact schema:
+${pFormat}`;
 
     const { text: raw, modelLabel } = await smartGenerate(prompt, true, STUDY_SET_PREF);
 
