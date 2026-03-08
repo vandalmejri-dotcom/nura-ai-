@@ -1,4 +1,5 @@
 // src/lib/llm-service.ts
+import { z } from 'zod';
 
 /**
  * Nura AI — Smart Multi-Model LLM Service with Quota Management (TypeScript Port)
@@ -11,34 +12,57 @@ export interface Model {
     rpd: number;
     tpm: number;
     priority: number;
+    provider?: 'gemini' | 'groq';
 }
 
 const MODELS: Model[] = [
     {
-        id: 'gemini-2.5-flash',
-        label: 'Gemini 2.5 Flash',
-        rpm: 10,
-        rpd: 250,
-        tpm: 250_000,
+        id: 'llama-3.1-8b-instant',
+        label: 'Groq Llama 3.1 8B',
+        rpm: 30,
+        rpd: 14400,
+        tpm: 1_000_000,
         priority: 1,
+        provider: 'groq',
     },
     {
-        id: 'gemini-2.0-flash-lite',
-        label: 'Gemini 2.0 Flash Lite',
+        id: 'llama-3.3-70b-versatile',
+        label: 'Groq Llama 3.3 70B',
+        rpm: 30,
+        rpd: 14400,
+        tpm: 1_000_000,
+        priority: 2,
+        provider: 'groq',
+    },
+    {
+        id: 'gemini-1.5-flash',
+        label: 'Gemini 1.5 Flash',
         rpm: 15,
         rpd: 1500,
-        tpm: 250_000,
-        priority: 2,
+        tpm: 1_000_000,
+        priority: 3,
+        provider: 'gemini',
     },
     {
-        id: 'gemini-2.5-pro',
-        label: 'Gemini 2.5 Pro',
-        rpm: 5,
-        rpd: 100,
-        tpm: 250_000,
-        priority: 3,
+        id: 'gemini-2.0-flash-lite-preview-02-05',
+        label: 'Gemini 2.0 Flash Lite',
+        rpm: 30,
+        rpd: 1500,
+        tpm: 1_000_000,
+        priority: 4,
+        provider: 'gemini',
+    },
+    {
+        id: 'gemini-1.5-pro',
+        label: 'Gemini 1.5 Pro',
+        rpm: 2,
+        rpd: 50,
+        tpm: 32_000,
+        priority: 5,
+        provider: 'gemini',
     }
 ];
+
 
 interface UsageRecord {
     recent: number[];
@@ -143,8 +167,9 @@ class QuotaManager {
 // In-memory singleton (lost on serverless restart, but good for base port)
 export const quota = new QuotaManager();
 
-const STUDY_SET_PREF = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
-const CHAT_PREF = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
+const STUDY_SET_PREF = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'gemini-1.5-flash', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-1.5-pro'];
+const CHAT_PREF = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'gemini-1.5-flash', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-1.5-pro'];
+
 
 async function callGemini(model: Model, prompt: string, jsonMode: boolean): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -202,6 +227,47 @@ async function callOllama(prompt: string, jsonMode: boolean) {
     return { text: data.response, modelLabel: 'Llama 3 (local)' };
 }
 
+async function callGroq(model: Model, prompt: string, jsonMode: boolean): Promise<string> {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('No Groq API key configured.');
+
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
+
+    const body: any = {
+        model: model.id,
+        messages: [{ role: 'user', content: prompt }],
+    };
+    if (jsonMode) {
+        body.response_format = { type: 'json_object' };
+    }
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        const status = res.status;
+        if (status === 429 || status === 403) {
+            quota.markExhausted(model.id);
+        }
+        throw new Error(`[${model.label}] HTTP ${status}: ${errText.substring(0, 250)}`);
+    }
+
+    const data = await res.json();
+    if (!data.choices?.length) throw new Error(`[${model.label}] No candidates returned.`);
+
+    const text = data.choices[0]?.message?.content;
+    if (!text) throw new Error(`[${model.label}] Empty text in response.`);
+
+    return text;
+}
+
 export async function smartGenerate(prompt: string, jsonMode: boolean, preferenceList: string[]) {
     const errors: string[] = [];
 
@@ -224,7 +290,9 @@ export async function smartGenerate(prompt: string, jsonMode: boolean, preferenc
         }
 
         try {
-            const text = await callGemini(model, prompt, jsonMode);
+            const text = model.provider === 'groq'
+                ? await callGroq(model, prompt, jsonMode)
+                : await callGemini(model, prompt, jsonMode);
             quota.recordSuccess(model.id);
             return { text, modelLabel: model.label };
         } catch (err: any) {
@@ -269,10 +337,12 @@ export const generateStudySet = async (fileName: string, fileContent: string, op
 
     const pFormat = `{\n  ${schemaProps.join(',\n  ')},\n  "stats": {"cardCount": 10, "quizCount": 5}\n}`;
 
-    const prompt = `You are an expert pedagogical AI. Generate a study set in ${langStr} from: ${fileName}
+    const prompt = `FULL EXTRACTED TEXT FROM USER PDF (length: ${fileContent.length} chars):
+${fileContent.substring(0, 100000)}
 
-Content:
-${fileContent.substring(0, 20000)}
+Now extract concepts, build Anki flashcards, Cornell notes, quizzes, fill-in-the-blanks exactly like Studley.ai.
+
+You are an expert pedagogical AI. Generate a study set in ${langStr} from: ${fileName}
 
 CRITICAL CONSTRAINTS FOR SPACED REPETITION:
 1. NO LaTeX. Plain text math only.
@@ -282,9 +352,32 @@ ${pFormat}`;
 
     const { text: raw, modelLabel } = await smartGenerate(prompt, true, STUDY_SET_PREF);
 
+    const StudySetOutputSchema = z.object({
+        stats: z.object({
+            cardCount: z.number().optional(),
+            quizCount: z.number().optional()
+        }).optional(),
+        flashcards: z.array(z.object({
+            front: z.string(),
+            back: z.string()
+        })).optional(),
+        quiz: z.array(z.object({
+            question: z.string(),
+            options: z.array(z.string()),
+            correctAnswerIndex: z.number(),
+            rationale: z.string().optional()
+        })).optional(),
+        notes: z.string().optional(),
+        podcast: z.string().optional(),
+        tutorLesson: z.string().optional(),
+        writtenTests: z.string().optional(),
+        fillInTheBlanks: z.string().optional()
+    });
+
     try {
         const clean = raw.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
-        const parsed = JSON.parse(clean);
+        const parsedJson = JSON.parse(clean);
+        const parsed = StudySetOutputSchema.parse(parsedJson);
         const words = fileContent.split(/\s+/).filter(w => w.length > 4);
 
         return {
@@ -338,3 +431,64 @@ export const chatTutor = async (fileName: string, documentContent: string, userM
     const { text, modelLabel } = await smartGenerate(prompt, false, CHAT_PREF);
     return `*(✨ Powered by ${modelLabel})*\n\n${text}`;
 };
+
+const TextAnalysisSchema = z.object({
+    concepts: z.array(z.string()),
+    flashcards: z.array(z.object({
+        front: z.string(),
+        back: z.string()
+    })),
+    cornell: z.object({
+        cues: z.array(z.string()),
+        notes: z.string(),
+        summary: z.string()
+    })
+});
+
+export async function generateTextAnalysis(text: string) {
+    const prompt = `
+Tu es un tuteur pédagogique IA expert. Ton rôle est d'analyser le texte fourni par l'étudiant et de générer un matériel d'étude structuré au format JSON.
+
+Analyse le texte suivant et génère EXACTEMENT cette structure JSON, sans aucun autre texte avant ou après :
+{
+  "concepts": [
+    "Concept ou terme clé 1",
+    "Concept ou terme clé 2"
+  ],
+  "flashcards": [
+    { "front": "Question testant un seul fait précis ?", "back": "Réponse courte et concise." }
+  ],
+  "cornell": {
+    "cues": ["Mots-clés", "Questions principales"],
+    "notes": "Tes notes détaillées avec des points de repère ou listes.",
+    "summary": "Un bref paragraphe résumant l'ensemble du texte."
+  }
+}
+
+Règles strictes :
+1. Extrait 10 à 15 flashcards maximum.
+2. Les flashcards doivent tester un seul concept à la fois (atomiques).
+3. Les notes Cornell doivent être très claires.
+4. Réponds UNIQUEMENT avec du JSON valide. N'ajoute pas de balises markdown comme \`\`\`json\` autour de ta réponse.
+
+TEXTE À ANALYSER :
+${text.substring(0, 50000)}
+`;
+
+    const { text: rawJson, modelLabel } = await smartGenerate(prompt, true, ['llama-3.1-8b-instant']);
+
+    try {
+        const clean = rawJson.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
+        const parsedJson = JSON.parse(clean);
+
+        const validatedData = TextAnalysisSchema.parse(parsedJson);
+
+        return {
+            provider: modelLabel,
+            data: validatedData
+        };
+    } catch (err: any) {
+        console.error("Erreur de parsing JSON ou de validation Zod :", err);
+        throw new Error("L'IA n'a pas retourné le format attendu.");
+    }
+}
