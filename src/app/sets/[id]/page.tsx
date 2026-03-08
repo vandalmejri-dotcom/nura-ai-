@@ -1,5 +1,4 @@
 'use client';
-export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -54,6 +53,7 @@ export default function StudySetDetail() {
         { id: 'notes', label: 'Cornell Notes', icon: FileText, disabled: !set.notes },
         { id: 'flashcards', label: 'Flashcards', icon: Cards, disabled: !set.flashcards },
         { id: 'quiz', label: 'Quiz Arena', icon: Exam, disabled: !set.quiz },
+        { id: 'fillInTheBlanks', label: 'Fill in the Blanks', icon: FileText, disabled: !set.fillInTheBlanks },
         { id: 'podcast', label: 'Podcast', icon: SpeakerHigh, disabled: !set.podcast },
         { id: 'tutor', label: 'AI Tutor', icon: ChatTeardropDots, disabled: false },
     ];
@@ -141,6 +141,12 @@ export default function StudySetDetail() {
                 {activeTab === 'quiz' && (
                     <div className="h-full animate-slide-up">
                         <QuizArena quiz={set.quiz || []} />
+                    </div>
+                )}
+
+                {activeTab === 'fillInTheBlanks' as Tab && (
+                    <div className="h-full animate-slide-up">
+                        <FillInTheBlanksArena items={(set.fillInTheBlanks as any[]) || []} />
                     </div>
                 )}
 
@@ -265,9 +271,9 @@ function QuizArena({ quiz }: { quiz: any[] }) {
     const current = quiz[index];
 
     const handleSelect = (idx: number) => {
-        if (selected !== null) return;
+        if (isCorrect) return; // Already answered correctly
         setSelected(idx);
-        const correct = idx === current.correctAnswerIndex;
+        const correct = idx === (current.correctAnswer ?? current.correctAnswerIndex);
         setIsCorrect(correct);
         if (correct) setScore(score + 1);
     };
@@ -299,7 +305,7 @@ function QuizArena({ quiz }: { quiz: any[] }) {
                         onClick={() => handleSelect(i)}
                         className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${selected === i
                             ? (isCorrect ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200' : 'bg-red-500/10 border-red-500/50 text-red-200')
-                            : selected !== null && i === current.correctAnswerIndex
+                            : selected !== null && i === (current.correctAnswer ?? current.correctAnswerIndex)
                                 ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200'
                                 : 'bg-white/5 border-white/5 hover:border-white/20 text-zinc-400'
                             }`}
@@ -316,7 +322,7 @@ function QuizArena({ quiz }: { quiz: any[] }) {
                                 <Warning size={24} weight="fill" />
                             </div>
                         )}
-                        {((selected === i && isCorrect) || (selected !== null && i === current.correctAnswerIndex)) && (
+                        {((selected === i && isCorrect) || (selected !== null && i === (current.correctAnswer ?? current.correctAnswerIndex))) && (
                             <div className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 animate-bounce">
                                 <Check size={24} weight="bold" />
                             </div>
@@ -329,13 +335,33 @@ function QuizArena({ quiz }: { quiz: any[] }) {
                 <div className="flex flex-col items-center space-y-6 pt-4 animate-slide-up">
                     <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-sm text-zinc-300 italic text-center w-full">
                         <span className="font-bold text-zinc-500 block mb-2 uppercase tracking-widest text-[10px]">Scientific Rationale</span>
-                        {current.rationale || "The correct physiological response relies on the structural integrity of the human's architectural instruction."}
+                        {current.explanation ?? current.rationale ?? "The correct physiological response relies on the structural integrity of the human's architectural instruction."}
                     </div>
-                    <button onClick={next} className="w-full py-5 rounded-2xl bg-zinc-100 text-black font-extrabold text-lg hover:bg-white transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-[0.98]">
+                    <button disabled={!isCorrect} onClick={next} className="w-full py-5 rounded-2xl bg-zinc-100 text-black font-extrabold text-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-[0.98]">
                         {index === quiz.length - 1 ? 'Finalize Mission' : 'Advance to Next Phase'} <ArrowRight weight="bold" />
                     </button>
                 </div>
             )}
+        </div>
+    );
+}
+
+function FillInTheBlanksArena({ items }: { items: any[] }) {
+    if (!items?.length) return <div>No Fill in the Blanks data generated.</div>;
+    return (
+        <div className="max-w-3xl mx-auto space-y-6 pt-10 animate-slide-up">
+            <h3 className="text-2xl font-bold mb-8">Exercices à Trous</h3>
+            {items.map((item, idx) => (
+                <div key={idx} className="p-6 rounded-2xl glass-dark border border-white/10 space-y-4">
+                    <p className="text-lg font-medium tracking-wide leading-relaxed">
+                        {item.sentence}
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-white/10 text-sm">
+                        <p className="text-fuchsia-400 font-bold">Réponse: <span className="text-white ml-2">{item.answer}</span></p>
+                        {item.hint && <p className="text-zinc-500 italic mt-1">Indice: {item.hint}</p>}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

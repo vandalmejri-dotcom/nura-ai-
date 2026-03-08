@@ -1,0 +1,63 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:D:\nura ai\.npmrc
+5 silly config load:file:C:\Users\wafam\.npmrc
+6 silly config load:file:C:\Users\wafam\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install @groq/groq-sdk pdf-parse youtube-transcript zod
+8 verbose argv "install" "@groq/groq-sdk" "pdf-parse" "youtube-transcript" "zod"
+9 verbose logfile logs-max:10 dir:d:\nura ai\.npm-cache\_logs\2026-03-08T21_05_57_651Z-
+10 verbose logfile d:\nura ai\.npm-cache\_logs\2026-03-08T21_05_57_651Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly logfile done cleaning log files
+14 silly idealTree buildDeps
+15 silly fetch manifest pdf-parse@^1.1.1
+16 silly packumentCache full:https://registry.npmjs.org/pdf-parse cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/pdf-parse 3486ms (cache revalidated)
+18 silly packumentCache full:https://registry.npmjs.org/pdf-parse set size:182111 disposed:false
+19 silly fetch manifest youtube-transcript@^1.2.1
+20 silly packumentCache full:https://registry.npmjs.org/youtube-transcript cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/youtube-transcript 694ms (cache revalidated)
+22 silly packumentCache full:https://registry.npmjs.org/youtube-transcript set size:22435 disposed:false
+23 silly fetch manifest zod@^4.3.6
+24 silly packumentCache full:https://registry.npmjs.org/zod cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/zod 267ms (cache revalidated)
+26 silly packumentCache full:https://registry.npmjs.org/zod set size:3489329 disposed:false
+27 silly fetch manifest @groq/groq-sdk@*
+28 silly packumentCache full:https://registry.npmjs.org/@groq%2fgroq-sdk cache-miss
+29 http fetch GET 404 https://registry.npmjs.org/@groq%2fgroq-sdk 602ms (cache skip)
+30 silly placeDep ROOT @groq/groq-sdk@ OK for: nura-app@0.1.0 want: *
+31 silly placeDep ROOT pdf-parse@1.1.4 REPLACE for: nura-app@0.1.0 want: ^1.1.1
+32 silly placeDep ROOT youtube-transcript@1.2.1 REPLACE for: nura-app@0.1.0 want: ^1.2.1
+33 silly placeDep ROOT zod@4.3.6 REPLACE for: nura-app@0.1.0 want: ^4.3.6
+34 verbose stack HttpErrorGeneral: 404 Not Found - GET https://registry.npmjs.org/@groq%2fgroq-sdk - Not found
+34 verbose stack     at C:\Program Files\nodejs\node_modules\npm\node_modules\npm-registry-fetch\lib\check-response.js:103:15
+34 verbose stack     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+34 verbose stack     at async RegistryFetcher.packument (C:\Program Files\nodejs\node_modules\npm\node_modules\pacote\lib\registry.js:90:19)
+34 verbose stack     at async RegistryFetcher.manifest (C:\Program Files\nodejs\node_modules\npm\node_modules\pacote\lib\registry.js:128:23)
+34 verbose stack     at async #fetchManifest (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:1202:20)
+34 verbose stack     at async #nodeFromEdge (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:1040:19)
+34 verbose stack     at async #buildDepStep (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:904:11)
+34 verbose stack     at async Arborist.buildIdealTree (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:181:7)
+34 verbose stack     at async Promise.all (index 1)
+34 verbose stack     at async Arborist.reify (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\reify.js:131:5)
+35 verbose statusCode 404
+36 verbose pkgid @groq/groq-sdk@*
+37 error code E404
+38 error 404 Not Found - GET https://registry.npmjs.org/@groq%2fgroq-sdk - Not found
+39 error 404
+40 error 404  '@groq/groq-sdk@*' is not in this registry.
+41 error 404
+42 error 404 Note that you can also install from a
+43 error 404 tarball, folder, http url, or git url.
+44 silly unfinished npm timer reify 1773003959126
+45 silly unfinished npm timer reify:loadTrees 1773003959127
+46 verbose cwd D:\nura ai
+47 verbose os Windows_NT 10.0.22631
+48 verbose node v22.14.0
+49 verbose npm  v10.9.2
+50 verbose exit 1
+51 verbose code 1
+52 error A complete log of this run can be found in: d:\nura ai\.npm-cache\_logs\2026-03-08T21_05_57_651Z-debug-0.log

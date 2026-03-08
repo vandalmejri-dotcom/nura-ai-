@@ -20,7 +20,7 @@ export interface StudySet {
     podcast?: string | null;
     tutorLesson?: string | null;
     writtenTests?: string | null;
-    fillInTheBlanks?: string | null;
+    fillInTheBlanks?: any[] | null;
     createdAt: number;
 }
 

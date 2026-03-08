@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
         let contextInjection = '';
         if (unfamiliarItems.length > 0) {
-            contextInjection = unfamiliarItems.map(item => JSON.stringify(item.contentPayload)).join('\n');
+            contextInjection = unfamiliarItems.map((item: any) => JSON.stringify(item.contentPayload)).join('\n');
         } else {
             contextInjection = 'The student currently has no unfamiliar concepts! Praise them and ask if they want to review anything specific.';
         }
@@ -40,7 +40,7 @@ ${messages.map((m: any) => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}
 
 TUTOR RESPONSE:`;
 
-        const { text, modelLabel } = await smartGenerate(systemPrompt, false, ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-pro']);
+        const { text, modelLabel } = await smartGenerate(systemPrompt, false, ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'gemini-1.5-flash', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-1.5-pro']);
 
         return NextResponse.json({
             success: true,

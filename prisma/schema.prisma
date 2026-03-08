@@ -60,6 +60,7 @@ model PedagogicalArtifact {
   masteryLevel       Int          @default(0) // 0 = Unfamiliar, 1 = Learning, 2 = Familiar, 3 = Mastered
   nextReviewDate     DateTime     @default(now())
   easeFactor         Float        @default(2.5)
+  interval           Int          @default(0) // Days until next review
   consecutiveCorrect Int          @default(0)
 
   createdAt          DateTime     @default(now())

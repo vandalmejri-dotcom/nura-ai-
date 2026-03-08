@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react';
 import { upload } from '@vercel/blob/client';
 import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
 
 interface UploadModalProps {
     isOpen: boolean;
@@ -29,7 +30,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     const [link, setLink] = useState('');
     const [rawText, setRawText] = useState('');
     const [options, setOptions] = useState<string[]>(['flashcards', 'quiz', 'notes']);
-    const [language, setLanguage] = useState('en');
+    const [language, setLanguage] = useState('fr');
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState('');
 
@@ -96,10 +97,15 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         setOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
     };
 
-    const startProcessing = async () => {
+    const startProcessing = async (e?: React.FormEvent) => {
+        if (e) {
+            e.preventDefault();
+        }
         setStep('processing');
         setError('');
         setProgress(5);
+
+        let isSuccess = false;
 
         try {
             let payload: any = { options, language };
@@ -116,9 +122,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 });
                 payload.blobUrl = blob.url;
                 payload.fileName = selectedFile.name;
-            } else {
+            } else if (link) {
                 payload.link = link;
+            } else if (rawText) {
                 payload.text = rawText;
+            } else {
+                throw new Error("No input provided.");
             }
 
             // Final processing step (PDF extraction + AI generation)
@@ -128,22 +137,70 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 body: JSON.stringify(payload)
             });
 
-            const result = await res.json();
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || `HTTP error! status: ${res.status}`);
+            }
+
+            let result: any = null;
+            const reader = res.body?.getReader();
+            const decoder = new TextDecoder();
+            if (reader) {
+                let bufferChars = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    bufferChars += decoder.decode(value, { stream: true });
+                    const lines = bufferChars.split('\n');
+                    bufferChars = lines.pop() || ''; // keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.type === 'debug') {
+                                (window as any).debugInfo = data;
+                                // Force re-render if we want, or rely on normal state
+                                const dbgElem = document.getElementById('debug-realtime');
+                                if (dbgElem) {
+                                    dbgElem.innerHTML = `<strong>DEBUG:</strong> Extracted ${data.length} characters | First 150 chars: ${data.preview.substring(0, 150)} | Sent to AI: YES`;
+                                }
+                            } else if (data.success !== undefined) {
+                                result = data; // Catch standard { success: true/false } fallback
+                            } else if (data.type === 'result') {
+                                result = { success: true, data: data.data };
+                            } else if (data.type === 'error') {
+                                result = { success: false, error: data.error };
+                            }
+                        } catch (e) { /* ignore parse error on incomplete chunks */ }
+                    }
+                }
+            } else {
+                result = await res.json();
+            }
+
             setProgress(100);
 
-            if (result.success) {
+            if (result && result.success) {
+                isSuccess = true;
                 setTimeout(() => {
                     onSuccess(result.data);
                     onClose();
                     reset();
                 }, 500);
             } else {
-                setError(result.error || 'Mission Failed. Try again.');
-                setStep('options');
+                throw new Error(result.error || 'Mission Failed. Try again.');
             }
         } catch (err: any) {
-            setError(err.message || 'Network Error. Is the engine running?');
-            setStep('options');
+            const errorMsg = err.message || 'Network Error. Is the engine running?';
+            setError(errorMsg);
+            toast.error(errorMsg);
+        } finally {
+            // Clearing the 5% loading ring / processing state
+            if (!isSuccess) {
+                setStep('options');
+            }
+            setProgress(0);
         }
     };
 
@@ -177,8 +234,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             <div
                                 {...getRootProps()}
                                 className={`flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${isDragActive
-                                        ? 'border-fuchsia-500 bg-fuchsia-500/10'
-                                        : 'border-white/10 hover:border-fuchsia-500/30 hover:bg-white/5'
+                                    ? 'border-fuchsia-500 bg-fuchsia-500/10'
+                                    : 'border-white/10 hover:border-fuchsia-500/30 hover:bg-white/5'
                                     }`}
                             >
                                 <input {...getInputProps()} />
@@ -251,8 +308,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                     autoFocus
                                     value={rawText}
                                     onChange={(e) => setRawText(e.target.value)}
-                                    placeholder="The mitochondria is the powerhouse of the cell..."
-                                    className="w-full h-40 bg-black/40 border border-white/10 rounded-2xl p-4 focus-within:border-fuchsia-500/50 transition-all outline-none resize-none text-sm"
+                                    placeholder="Paste your course notes, transcript, or scientific text here..."
+                                    className="w-full h-40 bg-black/40 border border-white/10 rounded-2xl p-4 focus-within:border-fuchsia-500/50 transition-all outline-none resize-none text-sm font-medium"
                                 />
                             </div>
                             <button
@@ -292,7 +349,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-4">
+                            <form onSubmit={(e) => startProcessing(e)} className="flex items-center justify-between pt-4">
                                 <div className="space-y-1">
                                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Output Language</p>
                                     <select
@@ -308,12 +365,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                 </div>
 
                                 <button
-                                    onClick={startProcessing}
+                                    type="submit"
                                     className="px-8 py-3.5 rounded-2xl bg-zinc-100 text-black font-bold hover:bg-white transition-all shadow-xl active:scale-95"
                                 >
                                     Confirm & Launch
                                 </button>
-                            </div>
+                            </form>
 
                             {error && (
                                 <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center gap-2">
@@ -347,6 +404,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                     <span>Processing: {selectedFile?.name || 'Content'}</span>
                                     <span>{progress}%</span>
                                 </div>
+                            </div>
+
+                            <div id="debug-realtime" className="text-[10px] text-fuchsia-400 mt-4 p-2 bg-fuchsia-900/20 rounded border border-fuchsia-500/30 w-full max-w-sm text-left font-mono">
+                                <strong>DEBUG:</strong> Waiting for text extraction...
                             </div>
                         </div>
                     )}

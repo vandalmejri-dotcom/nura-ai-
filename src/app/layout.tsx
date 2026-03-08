@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
+import { Toaster } from 'sonner';
 import { UIProvider } from "@/context/UIContext";
 import { StudySetsProvider } from "@/context/StudySetsContext";
 import GlobalElements from "@/components/layout/GlobalElements";
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans bg-black text-zinc-100 antialiased overflow-hidden`}>
         <UIProvider>
           <StudySetsProvider>
+            <Toaster position="top-center" theme="dark" />
             <GlobalElements />
             <div className="flex h-screen w-screen overflow-hidden bg-radial from-zinc-900 via-black to-black">
               <Sidebar />

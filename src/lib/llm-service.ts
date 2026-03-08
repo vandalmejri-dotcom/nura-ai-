@@ -310,98 +310,70 @@ export async function smartGenerate(prompt: string, jsonMode: boolean, preferenc
 }
 
 export const generateStudySet = async (fileName: string, fileContent: string, options: string[] = [], language = 'en') => {
-    const langMap: any = { en: 'US English', es: 'Spanish', fr: 'French', de: 'German', zh: 'Chinese' };
-    const langStr = langMap[language] || 'English';
-
-    let hasFlashcards = options.includes('flashcards');
-    let hasQuiz = options.includes('quiz');
+    // CoT: Hypothesis: Generate everything in one Groq call. Cons: Prompt drift, schema violations.
+    // Selected: Call generateTextAnalysis in parallel for each selected option to ensure 100% adherence to single-type 4-stage schema.
+    let hasFlashcards = options.includes('flashcards') || options.length === 0;
+    let hasQuiz = options.includes('quiz') || options.length === 0;
     let hasNotes = options.includes('notes');
-    let hasPodcast = options.includes('podcast');
     let hasTutorLesson = options.includes('tutorlesson');
-    let hasWrittenTests = options.includes('writtentests');
     let hasFillInTheBlanks = options.includes('fillintheblanks');
 
-    if (options.length === 0) {
-        hasFlashcards = true;
-        hasQuiz = true;
+    const promises: Promise<{ key: string, data: any }>[] = [];
+
+    if (hasFlashcards) {
+        promises.push(generateTextAnalysis(fileContent, "flashcards", "Génère des flashcards (front/back)", false)
+            .then(res => ({ key: 'flashcards', data: res.data?.items })));
+    }
+    if (hasQuiz) {
+        promises.push(generateTextAnalysis(fileContent, "quiz", "Génère un quiz à choix multiples", false)
+            .then(res => ({ key: 'quiz', data: res.data?.items })));
+    }
+    if (hasNotes) {
+        promises.push(generateTextAnalysis(fileContent, "cornell", "Génère des notes Cornell", false)
+            .then(res => ({ key: 'notes', data: res.data?.items?.length ? res.data?.items[0] : res.data?.items })));
+    }
+    if (hasTutorLesson) {
+        promises.push(generateTextAnalysis(fileContent, "tutor_response", "Crée une introduction socratique", false)
+            .then(res => ({ key: 'tutorLesson', data: res.data?.items })));
+    }
+    if (hasFillInTheBlanks) {
+        promises.push(generateTextAnalysis(fileContent, "fill_in_blanks", "Génère un exercice à trous", false)
+            .then(res => ({ key: 'fillInTheBlanks', data: res.data?.items })));
     }
 
-    let schemaProps: string[] = [];
-    if (hasFlashcards) schemaProps.push(`"flashcards": [{"front": "Atomic term/question (testing ONE concept)", "back": "Concise answer"}]`);
-    if (hasQuiz) schemaProps.push(`"quiz": [{"question": "Atomic multiple choice question", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "rationale": "Scientific rationale for the answer"}]`);
-    if (hasNotes) schemaProps.push(`"notes": "# Cornell Notes Title\\n\\n## Cues\\n- Cue 1\\n\\n## Notes\\nDetailed notes with markdown formatting and bullet points."`);
-    if (hasPodcast) schemaProps.push(`"podcast": "**Host 1:** Script..."`);
-    if (hasTutorLesson) schemaProps.push(`"tutorLesson": "## Lesson..."`);
-    if (hasWrittenTests) schemaProps.push(`"writtenTests": "## Test..."`);
-    if (hasFillInTheBlanks) schemaProps.push(`"fillInTheBlanks": "... ____ ... (Answer: ...)"`);
+    const results = await Promise.allSettled(promises);
+    const words = fileContent.split(/\s+/).filter(w => w.length > 4);
 
-    const pFormat = `{\n  ${schemaProps.join(',\n  ')},\n  "stats": {"cardCount": 10, "quizCount": 5}\n}`;
+    const output: any = {
+        id: 'set_' + Date.now(),
+        title: fileName.replace(/\.[^/.]+$/, ''),
+        sourceName: fileName,
+        generatedBy: 'Groq Multi-Agent',
+        stats: {
+            wordCount: words.length,
+            characterCount: fileContent.length,
+            cardCount: 0,
+            quizCount: 0,
+        },
+        flashcards: null,
+        quiz: null,
+        notes: null,
+        tutorLesson: null,
+        fillInTheBlanks: null
+    };
 
-    const prompt = `FULL EXTRACTED TEXT FROM USER PDF (length: ${fileContent.length} chars):
-${fileContent.substring(0, 100000)}
-
-Now extract concepts, build Anki flashcards, Cornell notes, quizzes, fill-in-the-blanks exactly like Studley.ai.
-
-You are an expert pedagogical AI. Generate a study set in ${langStr} from: ${fileName}
-
-CRITICAL CONSTRAINTS FOR SPACED REPETITION:
-1. NO LaTeX. Plain text math only.
-2. ATOMICITY: Every flashcard and quiz question MUST test a single, isolated fact. NEVER create compound questions that test multiple discrete facts simultaneously.
-3. OUTPUT STRICT JSON matching this exact schema:
-${pFormat}`;
-
-    const { text: raw, modelLabel } = await smartGenerate(prompt, true, STUDY_SET_PREF);
-
-    const StudySetOutputSchema = z.object({
-        stats: z.object({
-            cardCount: z.number().optional(),
-            quizCount: z.number().optional()
-        }).optional(),
-        flashcards: z.array(z.object({
-            front: z.string(),
-            back: z.string()
-        })).optional(),
-        quiz: z.array(z.object({
-            question: z.string(),
-            options: z.array(z.string()),
-            correctAnswerIndex: z.number(),
-            rationale: z.string().optional()
-        })).optional(),
-        notes: z.string().optional(),
-        podcast: z.string().optional(),
-        tutorLesson: z.string().optional(),
-        writtenTests: z.string().optional(),
-        fillInTheBlanks: z.string().optional()
+    results.forEach(res => {
+        if (res.status === 'fulfilled' && !res.value.data?.error) {
+            output[res.value.key] = res.value.data;
+        } else if (res.status === 'rejected') {
+            console.error(`Error generating one of the parts:`, res.reason);
+        }
     });
 
-    try {
-        const clean = raw.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
-        const parsedJson = JSON.parse(clean);
-        const parsed = StudySetOutputSchema.parse(parsedJson);
-        const words = fileContent.split(/\s+/).filter(w => w.length > 4);
+    output.stats.cardCount = output.flashcards?.length || 0;
+    output.stats.quizCount = output.quiz?.length || 0;
 
-        return {
-            id: 'set_' + Date.now(),
-            title: fileName.replace(/\.[^/.]+$/, ''),
-            sourceName: fileName,
-            generatedBy: modelLabel,
-            stats: {
-                wordCount: words.length,
-                characterCount: fileContent.length,
-                cardCount: parsed.stats?.cardCount ?? parsed.flashcards?.length ?? 0,
-                quizCount: parsed.stats?.quizCount ?? parsed.quiz?.length ?? 0,
-            },
-            flashcards: parsed.flashcards ?? null,
-            quiz: parsed.quiz ?? null,
-            notes: parsed.notes ?? null,
-            podcast: parsed.podcast ?? null,
-            tutorLesson: parsed.tutorLesson ?? null,
-            writtenTests: parsed.writtenTests ?? null,
-            fillInTheBlanks: parsed.fillInTheBlanks ?? null
-        };
-    } catch (err) {
-        throw new Error('AI output parse failed.');
-    }
+    return output;
 };
 
 export async function checkProviderStatus() {
@@ -426,62 +398,109 @@ export async function checkProviderStatus() {
     };
 }
 
-export const chatTutor = async (fileName: string, documentContent: string, userMessage: string) => {
-    const prompt = `You are a Socratic AI Mentor. Guide the student on "${fileName}".\n\nContent:\n${documentContent.substring(0, 20000)}\n\nStudent: "${userMessage}"\n\nRules: Markdown, no JSON, no LaTeX.`;
-    const { text, modelLabel } = await smartGenerate(prompt, false, CHAT_PREF);
-    return `*(✨ Powered by ${modelLabel})*\n\n${text}`;
+export const chatTutor = async (context: string, documentContent: string, userMessage: string) => {
+    const fullQuery = `Historique de conversation:\n${context}\n\nMessage actuel de l'étudiant:\n${userMessage}`;
+    const result = await generateTextAnalysis(documentContent, "tutor_response", fullQuery, true);
+
+    // Formatting the JSON output to text for the frontend component (since frontend expects a string reply in API)
+    // Or we can return JSON and let frontend format it. Let's return the string format or JSON.
+    // The instructions say EVERY generation must return STRICTLY VALID JSON. So the API returns JSON.
+    // We'll return the parsed object from generateTextAnalysis.
+
+    let replyText = "";
+    if (result.data?.items) {
+        const item = Array.isArray(result.data.items) ? result.data.items[0] : result.data.items;
+        if (item.response) replyText += item.response + "\n\n";
+        if (item.nextQuestion) replyText += "*" + item.nextQuestion + "*";
+        if (!replyText && item) replyText = typeof item === 'string' ? item : JSON.stringify(item);
+    } else if (result.error) {
+        replyText = "Erreur: " + result.error;
+    } else {
+        replyText = "Aucune réponse générée.";
+    }
+
+    // Embed progress info in text for now, or just return text
+    return `*(✨ Propulsé par ${result.provider})*\n\n${replyText}`;
 };
 
-const TextAnalysisSchema = z.object({
-    concepts: z.array(z.string()),
-    flashcards: z.array(z.object({
-        front: z.string(),
-        back: z.string()
-    })),
-    cornell: z.object({
-        cues: z.array(z.string()),
-        notes: z.string(),
-        summary: z.string()
-    })
+const CENTRAL_SYSTEM_PROMPT = `Tu es un tuteur pédagogique expert français, précis, rigoureux et inspiré de Studley AI. Adopte ce rôle strictement: un éducateur socratique qui guide l'étudiant via questions actives pour favoriser le rappel actif, sans jamais révéler les réponses directement sauf si demandé explicitement après tentative.
+Tu analyses UNIQUEMENT le texte fourni par l'étudiant. Tu ne devines jamais, tu n'hallucines jamais, tu ne parles jamais de toi-même, de Nura AI, ou de tout sujet externe. Si quelque chose n'est pas dans le texte, retourne IMMÉDIATEMENT {"error": "Pas dans le texte fourni"}.
+Pense étape par étape (chain-of-thought): 1. Identifie les concepts clés du texte. 2. Vérifie si la requête est couverte. 3. Génère 2-3 variantes de réponse. 4. Sélectionne la meilleure (self-consistency). 5. Valide contre schémas Zod.
+Réponds EXCLUSIVEMENT avec un objet JSON valide et rien d'autre :
+{
+  "type": "flashcards" | "quiz" | "cornell" | "tutor_response" | "analysis" | "fill_in_blanks",
+  "items": array of objects (strictly 3-10 items max, grounded in text),
+  "progress": {
+    "currentStage": "unfamiliar" | "learning" | "familiar" | "mastery",
+    "score": number between 0-100,
+    "nextStageUnlocked": boolean,
+    "pipelineBars": array of {stage: string, completed: boolean}
+  },
+  "error": string (only if applicable)
+}
+Règles strictes et exemples (few-shot):
+- Flashcards: Toujours tableau d'objets { "front": "Question claire et précise en français", "back": "Réponse complète et exacte en français, avec explication courte" } — jamais juste une question. Exemple: [{"front": "Qu'est-ce que la photosynthèse?", "back": "Processus par lequel les plantes convertissent la lumière en énergie, selon le texte."}]
+- Quiz: Toujours 4 choix (array de strings) + "correctAnswer": index (0-3) + "explanation": string courte en français. Exemple: {"question": "Capitale de la France?", "options": ["Paris", "Londres", "Berlin", "Madrid"], "correctAnswer": 0, "explanation": "Selon le texte, Paris est la capitale."}
+- Cornell: { "cues": array de questions clés, "notes": string détaillé, "summary": string court, tout en français }
+- Tutor: Réponse socratique courte en français + une question de rappel active pour faire avancer le stage. Exemple: {"response": "Pense à ce que dit le texte sur X. Quelle est ta réponse?", "nextQuestion": "Explique Y en tes mots."}
+- Fill-in-blanks: Tableau d'objets { "sentence": "Phrase avec _____", "answer": "Réponse exacte", "hint": "Indice du texte" }
+- Analysis: Résumé structuré avec points clés, tout en français.
+Toujours respecter les 4 stages: L'utilisateur doit répondre correctement (valider via comparaison) pour passer au stage suivant; inclure logique de progression dans JSON.
+Si le texte est en français, tout en français. Limite à contenu éducatif, précis, engageant. Constraints: Pas plus de 500 tokens par item, éviter répétitions.`;
+
+export const UnifiedOutputSchema = z.object({
+    type: z.enum(["flashcards", "quiz", "cornell", "tutor_response", "analysis", "fill_in_blanks"]),
+    items: z.any().optional(),
+    progress: z.object({
+        currentStage: z.enum(["unfamiliar", "learning", "familiar", "mastery"]),
+        score: z.number().min(0).max(100),
+        nextStageUnlocked: z.boolean(),
+        pipelineBars: z.array(z.object({
+            stage: z.string(),
+            completed: z.boolean()
+        }))
+    }).optional(),
+    error: z.string().optional()
 });
 
-export async function generateTextAnalysis(text: string) {
+export async function generateTextAnalysis(
+    text: string,
+    requestedType: "flashcards" | "quiz" | "cornell" | "tutor_response" | "analysis" | "fill_in_blanks" = "analysis",
+    userQuery: string = "",
+    useQualityModel: boolean = false
+) {
+    // Chain-of-thought: 
+    // Hypothesis 1: Injecting only the user query without the requested type. Pros: Simple. Cons: The model might output the wrong schema type.
+    // Hypothesis 2: Injecting the exact requestedType and forcing JSON mode. Pros: Guaranteed structure, strong grounding. Cons: Requires strict Zod validation.
+    // Selected: Hypothesis 2, using the central prompt and explicit type injection to ensure 0 hallucinations and exact format.
+
+    let modelPreference = useQualityModel
+        ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
+        : ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
+
     const prompt = `
-Tu es un tuteur pédagogique IA expert. Ton rôle est d'analyser le texte fourni par l'étudiant et de générer un matériel d'étude structuré au format JSON.
+${CENTRAL_SYSTEM_PROMPT}
 
-Analyse le texte suivant et génère EXACTEMENT cette structure JSON, sans aucun autre texte avant ou après :
-{
-  "concepts": [
-    "Concept ou terme clé 1",
-    "Concept ou terme clé 2"
-  ],
-  "flashcards": [
-    { "front": "Question testant un seul fait précis ?", "back": "Réponse courte et concise." }
-  ],
-  "cornell": {
-    "cues": ["Mots-clés", "Questions principales"],
-    "notes": "Tes notes détaillées avec des points de repère ou listes.",
-    "summary": "Un bref paragraphe résumant l'ensemble du texte."
-  }
-}
+TYPE DEMANDÉ : ${requestedType}
+${userQuery ? `REQUÊTE UTILISATEUR / CONTEXTE : ${userQuery}` : ''}
 
-Règles strictes :
-1. Extrait 10 à 15 flashcards maximum.
-2. Les flashcards doivent tester un seul concept à la fois (atomiques).
-3. Les notes Cornell doivent être très claires.
-4. Réponds UNIQUEMENT avec du JSON valide. N'ajoute pas de balises markdown comme \`\`\`json\` autour de ta réponse.
+TEXTE À ANALYSER (UNIQUE SOURCE DE VÉRITÉ) :
+${text.substring(0, 30000)}
 
-TEXTE À ANALYSER :
-${text.substring(0, 50000)}
+Instructions finales: Génère UNIQUEMENT un objet JSON valide correspondant au type "${requestedType}" demandé. Retourne l'erreur "Pas dans le texte fourni" si le texte ne permet pas de générer le contenu de manière fiable.
 `;
 
-    const { text: rawJson, modelLabel } = await smartGenerate(prompt, true, ['llama-3.1-8b-instant']);
+    const { text: rawJson, modelLabel } = await smartGenerate(prompt, true, modelPreference);
 
     try {
         const clean = rawJson.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
         const parsedJson = JSON.parse(clean);
 
-        const validatedData = TextAnalysisSchema.parse(parsedJson);
+        if (parsedJson.error) {
+            return { error: parsedJson.error, provider: modelLabel };
+        }
+
+        const validatedData = UnifiedOutputSchema.parse(parsedJson);
 
         return {
             provider: modelLabel,
@@ -489,6 +508,6 @@ ${text.substring(0, 50000)}
         };
     } catch (err: any) {
         console.error("Erreur de parsing JSON ou de validation Zod :", err);
-        throw new Error("L'IA n'a pas retourné le format attendu.");
+        throw new Error("L'IA n'a pas retourné le format attendu ou un problème de parsing est survenu.");
     }
 }

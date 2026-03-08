@@ -10,8 +10,27 @@ if (typeof global.Path2D === 'undefined') { (global as any).Path2D = class { }; 
 const pdfParse = require('pdf-parse');
 
 export async function parsePDF(buffer: Buffer): Promise<string> {
-    const data = await pdfParse(buffer);
-    return data.text;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (buffer.length > MAX_SIZE) {
+        throw new Error("File exceeds 10MB limit.");
+    }
+
+    try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error("pdf-parse extraction timed out after 30 seconds")), 30000);
+        });
+
+        // @ts-ignore
+        const data = await Promise.race([
+            pdfParse(buffer),
+            timeoutPromise
+        ]);
+
+        return data.text || "";
+    } catch (err: any) {
+        console.error("Erreur d'extraction PDF:", err);
+        throw new Error(err.message || "Failed to parse PDF");
+    }
 }
 
 export async function parseDOCX(buffer: Buffer): Promise<string> {
@@ -21,39 +40,47 @@ export async function parseDOCX(buffer: Buffer): Promise<string> {
 
 export async function fetchYouTubeTranscript(url: string): Promise<string> {
     try {
-        // Attempt external transcript extraction API (e.g. transcriptapi.com) if configured
-        if (process.env.TRANSCRIPT_API_KEY) {
-            try {
-                const res = await fetch(`https://transcriptapi.com/api/v1/youtube?url=${encodeURIComponent(url)}`, {
-                    headers: { 'Authorization': `Bearer ${process.env.TRANSCRIPT_API_KEY}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    return data.transcript;
-                }
-            } catch (proxyError) {
-                console.warn('Proxy API failed, adhering to fallback mechanism:', proxyError);
-            }
-        }
-
-        // Fallback to primary internal extraction utility
+        // Option 1: Using YoutubeTranscript package directly
         const transcript = await YoutubeTranscript.fetchTranscript(url);
         if (!transcript || transcript.length === 0) {
-            throw new Error('No transcript available for this video.');
+            throw new Error("No transcript returned.");
         }
 
-        // Format with timestamps for "Deep Insights"
-        return transcript.map(t => {
-            const minutes = Math.floor(t.offset / 1000 / 60);
-            const seconds = Math.floor((t.offset / 1000) % 60);
+        return transcript.map((t: any) => {
+            const minutes = Math.floor((t.offset || 0) / 1000 / 60);
+            const seconds = Math.floor(((t.offset || 0) / 1000) % 60);
             const timestamp = `[${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
             return `${timestamp} ${t.text}`;
         }).join('\n');
     } catch (error: any) {
-        console.error('YouTube Fetch Error:', error.message);
-        if (error.message.includes('Too Many Requests') || error.message.includes('429')) {
-            throw new Error('YouTube is temporarily blocking requests due to Vercel Datacenter ASNs. Please use a text snippet or configure TRANSCRIPT_API_KEY.');
+        console.error('YouTube Fetch Error (youtube-transcript):', error.message);
+
+        // Option 2: Fallback to official API or external API if configured
+        try {
+            const apiKey = process.env.TRANSCRIPT_API_KEY;
+            if (apiKey) {
+                const res = await fetch(`https://transcriptapi.com/api/v1/youtube?url=${encodeURIComponent(url)}`, {
+                    headers: { 'Authorization': `Bearer ${apiKey}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.transcript) {
+                        if (Array.isArray(data.transcript)) {
+                            return data.transcript.map((t: any) => {
+                                const minutes = Math.floor((t.offset || 0) / 1000 / 60);
+                                const seconds = Math.floor(((t.offset || 0) / 1000) % 60);
+                                const timestamp = `[${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+                                return `${timestamp} ${t.text}`;
+                            }).join('\n');
+                        }
+                        return data.transcript;
+                    }
+                }
+            }
+        } catch (fallbackError) {
+            console.error('YouTube Fallback Error:', fallbackError);
         }
-        throw new Error('Could not retrieve transcript. Ensure the video is public and has captions enabled (TranscriptsDisabled state).');
+
+        throw new Error(error.message || 'Could not retrieve transcript perfectly from YouTube.');
     }
 }

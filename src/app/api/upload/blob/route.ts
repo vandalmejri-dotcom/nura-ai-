@@ -1,9 +1,5 @@
-// src/app/api/upload/blob/route.ts
-
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse> {
     const body = (await request.json()) as HandleUploadBody;
@@ -12,26 +8,34 @@ export async function POST(request: Request): Promise<NextResponse> {
         const jsonResponse = await handleUpload({
             body,
             request,
-            onBeforeGenerateToken: async (pathname) => {
-                // Here you can check user authentication/authorization
+            onBeforeGenerateToken: async (pathname: string, clientPayload: string | null) => {
+                // Return constraints and payload correctly
                 return {
-                    allowedContentTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
-                    tokenPayload: JSON.stringify({
-                        // optional payload
-                    }),
+                    allowedContentTypes: [
+                        'application/pdf',
+                        'image/jpeg',
+                        'image/png',
+                        'text/plain',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/msword'
+                    ],
+                    tokenPayload: clientPayload,
                 };
             },
             onUploadCompleted: async ({ blob, tokenPayload }) => {
-                // This is called once the file is fully uploaded
-                console.log('blob upload completed', blob, tokenPayload);
+                console.log('Vercel Blob upload completed:', blob, tokenPayload);
             },
         });
 
         return NextResponse.json(jsonResponse);
     } catch (error) {
+        console.error('Vercel Blob Handshake Error:', error);
         return NextResponse.json(
-            { error: (error as Error).message },
-            { status: 400 },
+            { error: (error as Error).message || 'Handshake failed' },
+            { status: 400 } // Send a clear error response
         );
     }
 }
+
+
+
