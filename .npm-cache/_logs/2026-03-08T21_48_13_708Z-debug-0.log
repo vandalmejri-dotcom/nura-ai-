@@ -1,0 +1,709 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:D:\nura ai\.npmrc
+5 silly config load:file:C:\Users\wafam\.npmrc
+6 silly config load:file:C:\Users\wafam\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install youtube-transcript@latest
+8 verbose argv "install" "youtube-transcript@latest"
+9 verbose logfile logs-max:10 dir:d:\nura ai\.npm-cache\_logs\2026-03-08T21_48_13_708Z-
+10 verbose logfile d:\nura ai\.npm-cache\_logs\2026-03-08T21_48_13_708Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly logfile done cleaning log files
+14 silly packumentCache corgi:https://registry.npmjs.org/youtube-transcript cache-miss
+15 http fetch GET 200 https://registry.npmjs.org/youtube-transcript 1447ms (cache miss)
+16 silly packumentCache corgi:https://registry.npmjs.org/youtube-transcript set size:undefined disposed:false
+17 silly idealTree buildDeps
+18 silly fetch manifest youtube-transcript@1.2.1
+19 silly packumentCache full:https://registry.npmjs.org/youtube-transcript cache-miss
+20 http fetch GET 200 https://registry.npmjs.org/youtube-transcript 219ms (cache revalidated)
+21 silly packumentCache full:https://registry.npmjs.org/youtube-transcript set size:22435 disposed:false
+22 silly placeDep ROOT youtube-transcript@1.2.1 REPLACE for: nura-app@0.1.0 want: 1.2.1
+23 silly reify moves {}
+24 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-wasm32-wasi
+25 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-wasm32-wasi' ]
+26 silly audit bulk request {
+26 silly audit   '@alloc/quick-lru': [ '5.2.0' ],
+26 silly audit   '@emnapi/core': [ '1.8.1' ],
+26 silly audit   '@emnapi/runtime': [ '1.8.1' ],
+26 silly audit   '@emnapi/wasi-threads': [ '1.1.0' ],
+26 silly audit   '@eslint-community/eslint-utils': [ '4.9.1' ],
+26 silly audit   'eslint-visitor-keys': [ '3.4.3', '5.0.1', '4.2.1' ],
+26 silly audit   '@eslint-community/regexpp': [ '4.12.2' ],
+26 silly audit   '@eslint/config-array': [ '0.21.1' ],
+26 silly audit   '@eslint/config-helpers': [ '0.4.2' ],
+26 silly audit   '@eslint/core': [ '0.17.0' ],
+26 silly audit   '@eslint/eslintrc': [ '3.3.4' ],
+26 silly audit   '@eslint/js': [ '9.39.3' ],
+26 silly audit   '@eslint/object-schema': [ '2.1.7' ],
+26 silly audit   '@eslint/plugin-kit': [ '0.4.1' ],
+26 silly audit   '@humanfs/core': [ '0.19.1' ],
+26 silly audit   '@humanfs/node': [ '0.16.7' ],
+26 silly audit   '@humanwhocodes/module-importer': [ '1.0.1' ],
+26 silly audit   '@humanwhocodes/retry': [ '0.4.3' ],
+26 silly audit   '@img/colour': [ '1.1.0' ],
+26 silly audit   '@img/sharp-darwin-arm64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-darwin-x64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-libvips-darwin-arm64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-darwin-x64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-arm': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-arm64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-ppc64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-riscv64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-s390x': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linux-x64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linuxmusl-arm64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-libvips-linuxmusl-x64': [ '1.2.4' ],
+26 silly audit   '@img/sharp-linux-arm': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linux-arm64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linux-ppc64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linux-riscv64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linux-s390x': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linux-x64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linuxmusl-arm64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-linuxmusl-x64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-wasm32': [ '0.34.5' ],
+26 silly audit   '@img/sharp-win32-arm64': [ '0.34.5' ],
+26 silly audit   '@img/sharp-win32-ia32': [ '0.34.5' ],
+26 silly audit   '@img/sharp-win32-x64': [ '0.34.5' ],
+26 silly audit   '@jridgewell/gen-mapping': [ '0.3.13' ],
+26 silly audit   '@jridgewell/remapping': [ '2.3.5' ],
+26 silly audit   '@jridgewell/resolve-uri': [ '3.1.2' ],
+26 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+26 silly audit   '@jridgewell/trace-mapping': [ '0.3.31' ],
+26 silly audit   '@napi-rs/wasm-runtime': [ '0.2.12' ],
+26 silly audit   '@next/env': [ '16.1.6' ],
+26 silly audit   '@next/eslint-plugin-next': [ '15.1.7' ],
+26 silly audit   '@next/swc-darwin-arm64': [ '16.1.6' ],
+26 silly audit   '@next/swc-darwin-x64': [ '16.1.6' ],
+26 silly audit   '@next/swc-linux-arm64-gnu': [ '16.1.6' ],
+26 silly audit   '@next/swc-linux-arm64-musl': [ '16.1.6' ],
+26 silly audit   '@next/swc-linux-x64-gnu': [ '16.1.6' ],
+26 silly audit   '@next/swc-linux-x64-musl': [ '16.1.6' ],
+26 silly audit   '@next/swc-win32-arm64-msvc': [ '16.1.6' ],
+26 silly audit   '@next/swc-win32-x64-msvc': [ '16.1.6' ],
+26 silly audit   '@nodelib/fs.scandir': [ '2.1.5' ],
+26 silly audit   '@nodelib/fs.stat': [ '2.0.5' ],
+26 silly audit   '@nodelib/fs.walk': [ '1.2.8' ],
+26 silly audit   '@nolyfill/is-core-module': [ '1.0.39' ],
+26 silly audit   '@phosphor-icons/react': [ '2.1.10' ],
+26 silly audit   '@prisma/client': [ '5.22.0' ],
+26 silly audit   '@prisma/debug': [ '5.22.0' ],
+26 silly audit   '@prisma/engines': [ '5.22.0' ],
+26 silly audit   '@prisma/engines-version': [ '5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2' ],
+26 silly audit   '@prisma/fetch-engine': [ '5.22.0' ],
+26 silly audit   '@prisma/get-platform': [ '5.22.0' ],
+26 silly audit   '@rtsao/scc': [ '1.1.0' ],
+26 silly audit   '@rushstack/eslint-patch': [ '1.16.1' ],
+26 silly audit   '@swc/helpers': [ '0.5.15' ],
+26 silly audit   '@tailwindcss/node': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-android-arm64': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-darwin-arm64': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-darwin-x64': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-freebsd-x64': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-linux-arm-gnueabihf': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-linux-arm64-gnu': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-linux-arm64-musl': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-linux-x64-gnu': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-linux-x64-musl': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-win32-arm64-msvc': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/oxide-win32-x64-msvc': [ '4.2.1' ],
+26 silly audit   '@tailwindcss/postcss': [ '4.2.1' ],
+26 silly audit   '@tybys/wasm-util': [ '0.10.1' ],
+26 silly audit   '@types/estree': [ '1.0.8' ],
+26 silly audit   '@types/json-schema': [ '7.0.15' ],
+26 silly audit   '@types/json5': [ '0.0.29' ],
+26 silly audit   '@types/node': [ '20.19.37' ],
+26 silly audit   '@types/react': [ '19.2.14' ],
+26 silly audit   '@types/react-dom': [ '19.2.3' ],
+26 silly audit   '@typescript-eslint/eslint-plugin': [ '8.56.1' ],
+26 silly audit   ignore: [ '7.0.5', '5.3.2' ],
+26 silly audit   '@typescript-eslint/parser': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/project-service': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/scope-manager': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/tsconfig-utils': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/type-utils': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/types': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/typescript-estree': [ '8.56.1' ],
+26 silly audit   'balanced-match': [ '4.0.4', '1.0.2' ],
+26 silly audit   'brace-expansion': [ '5.0.4', '1.1.12' ],
+26 silly audit   minimatch: [ '10.2.4', '3.1.5' ],
+26 silly audit   '@typescript-eslint/utils': [ '8.56.1' ],
+26 silly audit   '@typescript-eslint/visitor-keys': [ '8.56.1' ],
+26 silly audit   '@unrs/resolver-binding-android-arm-eabi': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-android-arm64': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-darwin-arm64': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-darwin-x64': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-freebsd-x64': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-arm-gnueabihf': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-arm-musleabihf': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-arm64-gnu': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-arm64-musl': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-ppc64-gnu': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-riscv64-gnu': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-riscv64-musl': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-s390x-gnu': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-x64-gnu': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-linux-x64-musl': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-wasm32-wasi': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-win32-arm64-msvc': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-win32-ia32-msvc': [ '1.11.1' ],
+26 silly audit   '@unrs/resolver-binding-win32-x64-msvc': [ '1.11.1' ],
+26 silly audit   '@vercel/blob': [ '2.3.1' ],
+26 silly audit   '@xmldom/xmldom': [ '0.8.11' ],
+26 silly audit   acorn: [ '8.16.0' ],
+26 silly audit   'acorn-jsx': [ '5.3.2' ],
+26 silly audit   ajv: [ '6.14.0' ],
+26 silly audit   'ansi-styles': [ '4.3.0' ],
+26 silly audit   argparse: [ '2.0.1', '1.0.10' ],
+26 silly audit   'aria-query': [ '5.3.2' ],
+26 silly audit   'array-buffer-byte-length': [ '1.0.2' ],
+26 silly audit   'array-includes': [ '3.1.9' ],
+26 silly audit   'array.prototype.findlast': [ '1.2.5' ],
+26 silly audit   'array.prototype.findlastindex': [ '1.2.6' ],
+26 silly audit   'array.prototype.flat': [ '1.3.3' ],
+26 silly audit   'array.prototype.flatmap': [ '1.3.3' ],
+26 silly audit   'array.prototype.tosorted': [ '1.1.4' ],
+26 silly audit   'arraybuffer.prototype.slice': [ '1.0.4' ],
+26 silly audit   'ast-types-flow': [ '0.0.8' ],
+26 silly audit   'async-function': [ '1.0.0' ],
+26 silly audit   'async-retry': [ '1.3.3' ],
+26 silly audit   'attr-accept': [ '2.2.5' ],
+26 silly audit   'available-typed-arrays': [ '1.0.7' ],
+26 silly audit   'axe-core': [ '4.11.1' ],
+26 silly audit   'axobject-query': [ '4.1.0' ],
+26 silly audit   'base64-js': [ '1.5.1', '0.0.8' ],
+26 silly audit   'baseline-browser-mapping': [ '2.10.0' ],
+26 silly audit   bluebird: [ '3.4.7' ],
+26 silly audit   braces: [ '3.0.3' ],
+26 silly audit   brotli: [ '1.3.3' ],
+26 silly audit   'call-bind': [ '1.0.8' ],
+26 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+26 silly audit   'call-bound': [ '1.0.4' ],
+26 silly audit   callsites: [ '3.1.0' ],
+26 silly audit   'caniuse-lite': [ '1.0.30001777' ],
+26 silly audit   chalk: [ '4.1.2' ],
+26 silly audit   'client-only': [ '0.0.1' ],
+26 silly audit   clone: [ '2.1.2' ],
+26 silly audit   'color-convert': [ '2.0.1' ],
+26 silly audit   'color-name': [ '1.1.4' ],
+26 silly audit   'concat-map': [ '0.0.1' ],
+26 silly audit   'core-util-is': [ '1.0.3' ],
+26 silly audit   'cross-spawn': [ '7.0.6' ],
+26 silly audit   'crypto-js': [ '4.2.0' ],
+26 silly audit   csstype: [ '3.2.3' ],
+26 silly audit   'damerau-levenshtein': [ '1.0.8' ],
+26 silly audit   'data-view-buffer': [ '1.0.2' ],
+26 silly audit   'data-view-byte-length': [ '1.0.2' ],
+26 silly audit   'data-view-byte-offset': [ '1.0.1' ],
+26 silly audit   debug: [ '4.4.3', '3.2.7' ],
+26 silly audit   'deep-is': [ '0.1.4' ],
+26 silly audit   'define-data-property': [ '1.1.4' ],
+26 silly audit   'define-properties': [ '1.2.1' ],
+26 silly audit   'detect-libc': [ '2.1.2' ],
+26 silly audit   dfa: [ '1.2.0' ],
+26 silly audit   'dingbat-to-unicode': [ '1.0.1' ],
+26 silly audit   doctrine: [ '2.1.0' ],
+26 silly audit   duck: [ '0.1.12' ],
+26 silly audit   'dunder-proto': [ '1.0.1' ],
+26 silly audit   'emoji-regex': [ '9.2.2' ],
+26 silly audit   'enhanced-resolve': [ '5.20.0' ],
+26 silly audit   'es-abstract': [ '1.24.1' ],
+26 silly audit   'es-define-property': [ '1.0.1' ],
+26 silly audit   'es-errors': [ '1.3.0' ],
+26 silly audit   'es-iterator-helpers': [ '1.2.2' ],
+26 silly audit   'es-object-atoms': [ '1.1.1' ],
+26 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+26 silly audit   'es-shim-unscopables': [ '1.1.0' ],
+26 silly audit   'es-to-primitive': [ '1.3.0' ],
+26 silly audit   'escape-string-regexp': [ '4.0.0' ],
+26 silly audit   eslint: [ '9.39.3' ],
+26 silly audit   'eslint-config-next': [ '15.1.7' ],
+26 silly audit   'eslint-import-resolver-node': [ '0.3.9' ],
+26 silly audit   'eslint-import-resolver-typescript': [ '3.10.1' ],
+26 silly audit   'eslint-module-utils': [ '2.12.1' ],
+26 silly audit   'eslint-plugin-import': [ '2.32.0' ],
+26 silly audit   semver: [ '6.3.1', '7.7.4' ],
+26 silly audit   'eslint-plugin-jsx-a11y': [ '6.10.2' ],
+26 silly audit   'eslint-plugin-react': [ '7.37.5' ],
+26 silly audit   'eslint-plugin-react-hooks': [ '5.2.0' ],
+26 silly audit   resolve: [ '2.0.0-next.6', '1.22.11' ],
+26 silly audit   'eslint-scope': [ '8.4.0' ],
+26 silly audit   espree: [ '10.4.0' ],
+26 silly audit   esquery: [ '1.7.0' ],
+26 silly audit   esrecurse: [ '4.3.0' ],
+26 silly audit   estraverse: [ '5.3.0' ],
+26 silly audit   esutils: [ '2.0.3' ],
+26 silly audit   'fast-deep-equal': [ '3.1.3' ],
+26 silly audit   'fast-glob': [ '3.3.1' ],
+26 silly audit   'glob-parent': [ '5.1.2', '6.0.2' ],
+26 silly audit   'fast-json-stable-stringify': [ '2.1.0' ],
+26 silly audit   'fast-levenshtein': [ '2.0.6' ],
+26 silly audit   fastq: [ '1.20.1' ],
+26 silly audit   'file-entry-cache': [ '8.0.0' ],
+26 silly audit   'file-selector': [ '2.1.2' ],
+26 silly audit   'fill-range': [ '7.1.1' ],
+26 silly audit   'find-up': [ '5.0.0' ],
+26 silly audit   'flat-cache': [ '4.0.1' ],
+26 silly audit   flatted: [ '3.3.4' ],
+26 silly audit   fontkit: [ '2.0.4' ],
+26 silly audit   'for-each': [ '0.3.5' ],
+26 silly audit   fsevents: [ '2.3.3' ],
+26 silly audit   'function-bind': [ '1.1.2' ],
+26 silly audit   'function.prototype.name': [ '1.1.8' ],
+26 silly audit   'functions-have-names': [ '1.2.3' ],
+26 silly audit   'generator-function': [ '2.0.1' ],
+26 silly audit   'get-intrinsic': [ '1.3.0' ],
+26 silly audit   'get-proto': [ '1.0.1' ],
+26 silly audit   'get-symbol-description': [ '1.1.0' ],
+26 silly audit   'get-tsconfig': [ '4.13.6' ],
+26 silly audit   globals: [ '14.0.0' ],
+26 silly audit   globalthis: [ '1.0.4' ],
+26 silly audit   gopd: [ '1.2.0' ],
+26 silly audit   'graceful-fs': [ '4.2.11' ],
+26 silly audit   'has-bigints': [ '1.1.0' ],
+26 silly audit   'has-flag': [ '4.0.0' ],
+26 silly audit   'has-property-descriptors': [ '1.0.2' ],
+26 silly audit   'has-proto': [ '1.2.0' ],
+26 silly audit   'has-symbols': [ '1.1.0' ],
+26 silly audit   'has-tostringtag': [ '1.0.2' ],
+26 silly audit   hasown: [ '2.0.2' ],
+26 silly audit   immediate: [ '3.0.6' ],
+26 silly audit   'import-fresh': [ '3.3.1' ],
+26 silly audit   imurmurhash: [ '0.1.4' ],
+26 silly audit   inherits: [ '2.0.4' ],
+26 silly audit   'internal-slot': [ '1.1.0' ],
+26 silly audit   'is-array-buffer': [ '3.0.5' ],
+26 silly audit   'is-async-function': [ '2.1.1' ],
+26 silly audit   'is-bigint': [ '1.1.0' ],
+26 silly audit   'is-boolean-object': [ '1.2.2' ],
+26 silly audit   'is-buffer': [ '2.0.5' ],
+26 silly audit   'is-bun-module': [ '2.0.0' ],
+26 silly audit   'is-callable': [ '1.2.7' ],
+26 silly audit   'is-core-module': [ '2.16.1' ],
+26 silly audit   'is-data-view': [ '1.0.2' ],
+26 silly audit   'is-date-object': [ '1.1.0' ],
+26 silly audit   'is-extglob': [ '2.1.1' ],
+26 silly audit   'is-finalizationregistry': [ '1.1.1' ],
+26 silly audit   'is-generator-function': [ '1.1.2' ],
+26 silly audit   'is-glob': [ '4.0.3' ],
+26 silly audit   'is-map': [ '2.0.3' ],
+26 silly audit   'is-negative-zero': [ '2.0.3' ],
+26 silly audit   'is-node-process': [ '1.2.0' ],
+26 silly audit   'is-number': [ '7.0.0' ],
+26 silly audit   'is-number-object': [ '1.1.1' ],
+26 silly audit   'is-regex': [ '1.2.1' ],
+26 silly audit   'is-set': [ '2.0.3' ],
+26 silly audit   'is-shared-array-buffer': [ '1.0.4' ],
+26 silly audit   'is-string': [ '1.1.1' ],
+26 silly audit   'is-symbol': [ '1.1.1' ],
+26 silly audit   'is-typed-array': [ '1.1.15' ],
+26 silly audit   'is-weakmap': [ '2.0.2' ],
+26 silly audit   'is-weakref': [ '1.1.1' ],
+26 silly audit   'is-weakset': [ '2.0.4' ],
+26 silly audit   isarray: [ '1.0.0', '2.0.5' ],
+26 silly audit   isexe: [ '2.0.0' ],
+26 silly audit   'iterator.prototype': [ '1.1.5' ],
+26 silly audit   jiti: [ '2.6.1' ],
+26 silly audit   'jpeg-exif': [ '1.1.4' ],
+26 silly audit   'js-tokens': [ '4.0.0' ],
+26 silly audit   'js-yaml': [ '4.1.1' ],
+26 silly audit   'json-buffer': [ '3.0.1' ],
+26 silly audit   'json-schema-traverse': [ '0.4.1' ],
+26 silly audit   'json-stable-stringify-without-jsonify': [ '1.0.1' ],
+26 silly audit   json5: [ '1.0.2' ],
+26 silly audit   'jsx-ast-utils': [ '3.3.5' ],
+26 silly audit   jszip: [ '3.10.1' ],
+26 silly audit   keyv: [ '4.5.4' ],
+26 silly audit   'language-subtag-registry': [ '0.3.23' ],
+26 silly audit   'language-tags': [ '1.0.9' ],
+26 silly audit   levn: [ '0.4.1' ],
+26 silly audit   lie: [ '3.3.0' ],
+26 silly audit   lightningcss: [ '1.31.1' ],
+26 silly audit   'lightningcss-android-arm64': [ '1.31.1' ],
+26 silly audit   'lightningcss-darwin-arm64': [ '1.31.1' ],
+26 silly audit   'lightningcss-darwin-x64': [ '1.31.1' ],
+26 silly audit   'lightningcss-freebsd-x64': [ '1.31.1' ],
+26 silly audit   'lightningcss-linux-arm-gnueabihf': [ '1.31.1' ],
+26 silly audit   'lightningcss-linux-arm64-gnu': [ '1.31.1' ],
+26 silly audit   'lightningcss-linux-arm64-musl': [ '1.31.1' ],
+26 silly audit   'lightningcss-linux-x64-gnu': [ '1.31.1' ],
+26 silly audit   'lightningcss-linux-x64-musl': [ '1.31.1' ],
+26 silly audit   'lightningcss-win32-arm64-msvc': [ '1.31.1' ],
+26 silly audit   'lightningcss-win32-x64-msvc': [ '1.31.1' ],
+26 silly audit   linebreak: [ '1.1.0' ],
+26 silly audit   'locate-path': [ '6.0.0' ],
+26 silly audit   'lodash.merge': [ '4.6.2' ],
+26 silly audit   'loose-envify': [ '1.4.0' ],
+26 silly audit   lop: [ '0.4.2' ],
+26 silly audit   'magic-string': [ '0.30.21' ],
+26 silly audit   mammoth: [ '1.11.0' ],
+26 silly audit   'math-intrinsics': [ '1.1.0' ],
+26 silly audit   merge2: [ '1.4.1' ],
+26 silly audit   micromatch: [ '4.0.8' ],
+26 silly audit   minimist: [ '1.2.8' ],
+26 silly audit   ms: [ '2.1.3' ],
+26 silly audit   nanoid: [ '3.3.11' ],
+26 silly audit   'napi-postinstall': [ '0.3.4' ],
+26 silly audit   'natural-compare': [ '1.4.0' ],
+26 silly audit   next: [ '16.1.6' ],
+26 silly audit   postcss: [ '8.4.31', '8.5.8' ],
+26 silly audit   'node-ensure': [ '0.0.0' ],
+26 silly audit   'node-exports-info': [ '1.6.0' ],
+26 silly audit   'object-assign': [ '4.1.1' ],
+26 silly audit   'object-inspect': [ '1.13.4' ],
+26 silly audit   'object-keys': [ '1.1.1' ],
+26 silly audit   'object.assign': [ '4.1.7' ],
+26 silly audit   'object.entries': [ '1.1.9' ],
+26 silly audit   'object.fromentries': [ '2.0.8' ],
+26 silly audit   'object.groupby': [ '1.0.3' ],
+26 silly audit   'object.values': [ '1.2.1' ],
+26 silly audit   option: [ '0.2.4' ],
+26 silly audit   optionator: [ '0.9.4' ],
+26 silly audit   'own-keys': [ '1.0.1' ],
+26 silly audit   'p-limit': [ '3.1.0' ],
+26 silly audit   'p-locate': [ '5.0.0' ],
+26 silly audit   pako: [ '1.0.11', '0.2.9' ],
+26 silly audit   'parent-module': [ '1.0.1' ],
+26 silly audit   'path-exists': [ '4.0.0' ],
+26 silly audit   'path-is-absolute': [ '1.0.1' ],
+26 silly audit   'path-key': [ '3.1.1' ],
+26 silly audit   'path-parse': [ '1.0.7' ],
+26 silly audit   'pdf-parse': [ '1.1.1' ],
+26 silly audit   pdfkit: [ '0.17.2' ],
+26 silly audit   picocolors: [ '1.1.1' ],
+26 silly audit   picomatch: [ '2.3.1', '4.0.3' ],
+26 silly audit   'png-js': [ '1.0.0' ],
+26 silly audit   'possible-typed-array-names': [ '1.1.0' ],
+26 silly audit   'prelude-ls': [ '1.2.1' ],
+26 silly audit   prisma: [ '5.22.0' ],
+26 silly audit   'process-nextick-args': [ '2.0.1' ],
+26 silly audit   'prop-types': [ '15.8.1' ],
+26 silly audit   punycode: [ '2.3.1' ],
+26 silly audit   'queue-microtask': [ '1.2.3' ],
+26 silly audit   react: [ '19.0.0' ],
+26 silly audit   'react-dom': [ '19.0.0' ],
+26 silly audit   'react-dropzone': [ '15.0.0' ],
+26 silly audit   'react-is': [ '16.13.1' ],
+26 silly audit   'readable-stream': [ '2.3.8' ],
+26 silly audit   'reflect.getprototypeof': [ '1.0.10' ],
+26 silly audit   'regexp.prototype.flags': [ '1.5.4' ],
+26 silly audit   'resolve-from': [ '4.0.0' ],
+26 silly audit   'resolve-pkg-maps': [ '1.0.0' ],
+26 silly audit   restructure: [ '3.0.2' ],
+26 silly audit   retry: [ '0.13.1' ],
+26 silly audit   reusify: [ '1.1.0' ],
+26 silly audit   'run-parallel': [ '1.2.0' ],
+26 silly audit   'safe-array-concat': [ '1.1.3' ],
+26 silly audit   'safe-buffer': [ '5.1.2' ],
+26 silly audit   'safe-push-apply': [ '1.0.0' ],
+26 silly audit   'safe-regex-test': [ '1.1.0' ],
+26 silly audit   scheduler: [ '0.25.0' ],
+26 silly audit   'set-function-length': [ '1.2.2' ],
+26 silly audit   'set-function-name': [ '2.0.2' ],
+26 silly audit   'set-proto': [ '1.0.0' ],
+26 silly audit   setimmediate: [ '1.0.5' ],
+26 silly audit   sharp: [ '0.34.5' ],
+26 silly audit   'shebang-command': [ '2.0.0' ],
+26 silly audit   'shebang-regex': [ '3.0.0' ],
+26 silly audit   'side-channel': [ '1.1.0' ],
+26 silly audit   'side-channel-list': [ '1.0.0' ],
+26 silly audit   'side-channel-map': [ '1.0.1' ],
+26 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+26 silly audit   sonner: [ '2.0.7' ],
+26 silly audit   'source-map-js': [ '1.2.1' ],
+26 silly audit   'sprintf-js': [ '1.0.3' ],
+26 silly audit   'stable-hash': [ '0.0.5' ],
+26 silly audit   'stop-iteration-iterator': [ '1.1.0' ],
+26 silly audit   string_decoder: [ '1.1.1' ],
+26 silly audit   'string.prototype.includes': [ '2.0.1' ],
+26 silly audit   'string.prototype.matchall': [ '4.0.12' ],
+26 silly audit   'string.prototype.repeat': [ '1.0.0' ],
+26 silly audit   'string.prototype.trim': [ '1.2.10' ],
+26 silly audit   'string.prototype.trimend': [ '1.0.9' ],
+26 silly audit   'string.prototype.trimstart': [ '1.0.8' ],
+26 silly audit   'strip-bom': [ '3.0.0' ],
+26 silly audit   'strip-json-comments': [ '3.1.1' ],
+26 silly audit   'styled-jsx': [ '5.1.6' ],
+26 silly audit   'supports-color': [ '7.2.0' ],
+26 silly audit   'supports-preserve-symlinks-flag': [ '1.0.0' ],
+26 silly audit   tailwindcss: [ '4.2.1' ],
+26 silly audit   tapable: [ '2.3.0' ],
+26 silly audit   throttleit: [ '2.1.0' ],
+26 silly audit   'tiny-inflate': [ '1.0.3' ],
+26 silly audit   tinyglobby: [ '0.2.15' ],
+26 silly audit   fdir: [ '6.5.0' ],
+26 silly audit   'to-regex-range': [ '5.0.1' ],
+26 silly audit   'ts-api-utils': [ '2.4.0' ],
+26 silly audit   'tsconfig-paths': [ '3.15.0' ],
+26 silly audit   tslib: [ '2.8.1' ],
+26 silly audit   'type-check': [ '0.4.0' ],
+26 silly audit   'typed-array-buffer': [ '1.0.3' ],
+26 silly audit   'typed-array-byte-length': [ '1.0.3' ],
+26 silly audit   'typed-array-byte-offset': [ '1.0.4' ],
+26 silly audit   'typed-array-length': [ '1.0.7' ],
+26 silly audit   typescript: [ '5.9.3' ],
+26 silly audit   'unbox-primitive': [ '1.1.0' ],
+26 silly audit   underscore: [ '1.13.8' ],
+26 silly audit   undici: [ '6.23.0' ],
+26 silly audit   'undici-types': [ '6.21.0' ],
+26 silly audit   'unicode-properties': [ '1.4.1' ],
+26 silly audit   'unicode-trie': [ '2.0.0' ],
+26 silly audit   'unrs-resolver': [ '1.11.1' ],
+26 silly audit   'uri-js': [ '4.4.1' ],
+26 silly audit   'util-deprecate': [ '1.0.2' ],
+26 silly audit   which: [ '2.0.2' ],
+26 silly audit   'which-boxed-primitive': [ '1.1.1' ],
+26 silly audit   'which-builtin-type': [ '1.2.1' ],
+26 silly audit   'which-collection': [ '1.0.2' ],
+26 silly audit   'which-typed-array': [ '1.1.20' ],
+26 silly audit   'word-wrap': [ '1.2.5' ],
+26 silly audit   xmlbuilder: [ '10.1.1' ],
+26 silly audit   'yocto-queue': [ '0.1.0' ],
+26 silly audit   zod: [ '4.3.6' ],
+26 silly audit   'youtube-transcript': [ '1.2.1' ],
+26 silly audit   '@tailwindcss/oxide-wasm32-wasi': [ '4.2.1' ]
+26 silly audit }
+27 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-win32-arm64-msvc
+28 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-win32-arm64-msvc' ]
+29 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-linux-x64-musl
+30 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-linux-x64-musl' ]
+31 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-linux-x64-gnu
+32 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-linux-x64-gnu' ]
+33 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-linux-arm64-musl
+34 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-linux-arm64-musl' ]
+35 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-linux-arm64-gnu
+36 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-linux-arm64-gnu' ]
+37 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-linux-arm-gnueabihf
+38 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-linux-arm-gnueabihf' ]
+39 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-freebsd-x64
+40 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-freebsd-x64' ]
+41 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-darwin-x64
+42 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-darwin-x64' ]
+43 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-darwin-arm64
+44 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-darwin-arm64' ]
+45 verbose reify failed optional dependency D:\nura ai\node_modules\lightningcss-android-arm64
+46 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\lightningcss-android-arm64' ]
+47 verbose reify failed optional dependency D:\nura ai\node_modules\fsevents
+48 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\fsevents' ]
+49 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-win32-ia32-msvc
+50 silly reify mark deleted [
+50 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-win32-ia32-msvc'
+50 silly reify ]
+51 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-win32-arm64-msvc
+52 silly reify mark deleted [
+52 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-win32-arm64-msvc'
+52 silly reify ]
+53 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-wasm32-wasi
+54 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-wasm32-wasi' ]
+55 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-x64-musl
+56 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-x64-musl' ]
+57 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-x64-gnu
+58 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-x64-gnu' ]
+59 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-s390x-gnu
+60 silly reify mark deleted [
+60 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-s390x-gnu'
+60 silly reify ]
+61 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-riscv64-musl
+62 silly reify mark deleted [
+62 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-riscv64-musl'
+62 silly reify ]
+63 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-riscv64-gnu
+64 silly reify mark deleted [
+64 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-riscv64-gnu'
+64 silly reify ]
+65 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-ppc64-gnu
+66 silly reify mark deleted [
+66 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-ppc64-gnu'
+66 silly reify ]
+67 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-arm64-musl
+68 silly reify mark deleted [
+68 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-arm64-musl'
+68 silly reify ]
+69 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-arm64-gnu
+70 silly reify mark deleted [
+70 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-arm64-gnu'
+70 silly reify ]
+71 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-arm-musleabihf
+72 silly reify mark deleted [
+72 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-arm-musleabihf'
+72 silly reify ]
+73 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-linux-arm-gnueabihf
+74 silly reify mark deleted [
+74 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-linux-arm-gnueabihf'
+74 silly reify ]
+75 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-freebsd-x64
+76 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-freebsd-x64' ]
+77 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-darwin-x64
+78 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-darwin-x64' ]
+79 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-darwin-arm64
+80 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-darwin-arm64' ]
+81 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-android-arm64
+82 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-android-arm64' ]
+83 verbose reify failed optional dependency D:\nura ai\node_modules\@unrs\resolver-binding-android-arm-eabi
+84 silly reify mark deleted [
+84 silly reify   'D:\\nura ai\\node_modules\\@unrs\\resolver-binding-android-arm-eabi'
+84 silly reify ]
+85 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-win32-arm64-msvc
+86 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-win32-arm64-msvc' ]
+87 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-linux-x64-musl
+88 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-linux-x64-musl' ]
+89 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-linux-x64-gnu
+90 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-linux-x64-gnu' ]
+91 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-linux-arm64-musl
+92 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-linux-arm64-musl' ]
+93 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-linux-arm64-gnu
+94 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-linux-arm64-gnu' ]
+95 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-linux-arm-gnueabihf
+96 silly reify mark deleted [
+96 silly reify   'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-linux-arm-gnueabihf'
+96 silly reify ]
+97 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-freebsd-x64
+98 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-freebsd-x64' ]
+99 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-darwin-x64
+100 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-darwin-x64' ]
+101 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-darwin-arm64
+102 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-darwin-arm64' ]
+103 verbose reify failed optional dependency D:\nura ai\node_modules\@tailwindcss\oxide-android-arm64
+104 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@tailwindcss\\oxide-android-arm64' ]
+105 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-win32-arm64-msvc
+106 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-win32-arm64-msvc' ]
+107 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-linux-x64-musl
+108 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-linux-x64-musl' ]
+109 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-linux-x64-gnu
+110 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-linux-x64-gnu' ]
+111 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-linux-arm64-musl
+112 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-linux-arm64-musl' ]
+113 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-linux-arm64-gnu
+114 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-linux-arm64-gnu' ]
+115 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-darwin-x64
+116 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-darwin-x64' ]
+117 verbose reify failed optional dependency D:\nura ai\node_modules\@next\swc-darwin-arm64
+118 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@next\\swc-darwin-arm64' ]
+119 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-win32-ia32
+120 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-win32-ia32' ]
+121 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-win32-arm64
+122 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-win32-arm64' ]
+123 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-wasm32
+124 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-wasm32' ]
+125 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linuxmusl-x64
+126 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linuxmusl-x64' ]
+127 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linuxmusl-arm64
+128 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linuxmusl-arm64' ]
+129 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-x64
+130 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-x64' ]
+131 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-s390x
+132 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-s390x' ]
+133 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-riscv64
+134 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-riscv64' ]
+135 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-ppc64
+136 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-ppc64' ]
+137 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-arm64
+138 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-arm64' ]
+139 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-linux-arm
+140 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-linux-arm' ]
+141 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linuxmusl-x64
+142 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linuxmusl-x64' ]
+143 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linuxmusl-arm64
+144 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linuxmusl-arm64' ]
+145 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-x64
+146 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-x64' ]
+147 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-s390x
+148 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-s390x' ]
+149 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-riscv64
+150 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-riscv64' ]
+151 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-ppc64
+152 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-ppc64' ]
+153 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-arm64
+154 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-arm64' ]
+155 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-linux-arm
+156 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-linux-arm' ]
+157 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-darwin-x64
+158 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-darwin-x64' ]
+159 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-libvips-darwin-arm64
+160 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-libvips-darwin-arm64' ]
+161 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-darwin-x64
+162 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-darwin-x64' ]
+163 verbose reify failed optional dependency D:\nura ai\node_modules\@img\sharp-darwin-arm64
+164 silly reify mark deleted [ 'D:\\nura ai\\node_modules\\@img\\sharp-darwin-arm64' ]
+165 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 539ms
+166 silly audit report {}
+167 silly ADD
+168 silly ADD
+169 silly ADD
+170 silly ADD
+171 silly ADD
+172 silly ADD
+173 silly ADD
+174 silly ADD
+175 silly ADD
+176 silly ADD
+177 silly ADD
+178 silly ADD
+179 silly ADD
+180 silly ADD
+181 silly ADD
+182 silly ADD
+183 silly ADD
+184 silly ADD
+185 silly ADD
+186 silly ADD
+187 silly ADD
+188 silly ADD
+189 silly ADD
+190 silly ADD
+191 silly ADD
+192 silly ADD
+193 silly ADD
+194 silly ADD
+195 silly ADD
+196 silly ADD
+197 silly ADD
+198 silly ADD
+199 silly ADD
+200 silly ADD
+201 silly ADD
+202 silly ADD
+203 silly ADD
+204 silly ADD
+205 silly ADD
+206 silly ADD
+207 silly ADD
+208 silly ADD
+209 silly ADD
+210 silly ADD
+211 silly ADD
+212 silly ADD
+213 silly ADD
+214 silly ADD
+215 silly ADD
+216 silly ADD
+217 silly ADD
+218 silly ADD
+219 silly ADD
+220 silly ADD
+221 silly ADD
+222 silly ADD
+223 silly ADD
+224 silly ADD
+225 silly ADD
+226 silly ADD
+227 silly ADD
+228 silly ADD
+229 silly ADD
+230 silly ADD
+231 silly ADD
+232 silly ADD
+233 silly ADD
+234 silly ADD
+235 silly ADD
+236 silly ADD
+237 verbose cwd D:\nura ai
+238 verbose os Windows_NT 10.0.22631
+239 verbose node v22.14.0
+240 verbose npm  v10.9.2
+241 verbose exit 0
+242 info ok

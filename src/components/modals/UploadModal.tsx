@@ -143,36 +143,39 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             }
 
             let result: any = null;
-            const reader = res.body?.getReader();
-            const decoder = new TextDecoder();
-            if (reader) {
-                let bufferChars = '';
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    bufferChars += decoder.decode(value, { stream: true });
-                    const lines = bufferChars.split('\n');
-                    bufferChars = lines.pop() || ''; // keep incomplete line in buffer
+            const contentType = res.headers.get('content-type');
 
-                    for (const line of lines) {
-                        if (!line.trim()) continue;
-                        try {
-                            const data = JSON.parse(line);
-                            if (data.type === 'debug') {
-                                (window as any).debugInfo = data;
-                                // Force re-render if we want, or rely on normal state
-                                const dbgElem = document.getElementById('debug-realtime');
-                                if (dbgElem) {
-                                    dbgElem.innerHTML = `<strong>DEBUG:</strong> Extracted ${data.length} characters | First 150 chars: ${data.preview.substring(0, 150)} | Sent to AI: YES`;
+            if (contentType && contentType.includes('application/x-ndjson')) {
+                const reader = res.body?.getReader();
+                const decoder = new TextDecoder();
+                if (reader) {
+                    let bufferChars = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        bufferChars += decoder.decode(value, { stream: true });
+                        const lines = bufferChars.split('\n');
+                        bufferChars = lines.pop() || ''; // keep incomplete line in buffer
+
+                        for (const line of lines) {
+                            if (!line.trim()) continue;
+                            try {
+                                const data = JSON.parse(line);
+                                if (data.type === 'debug') {
+                                    (window as any).debugInfo = data;
+                                    const dbgElem = document.getElementById('debug-realtime');
+                                    if (dbgElem) {
+                                        dbgElem.innerHTML = `<strong>DEBUG:</strong> Extracted ${data.length} characters | First 150 chars: ${data.preview.substring(0, 150)} | Sent to AI: YES`;
+                                    }
+                                } else if (data.success !== undefined) {
+                                    result = data;
+                                } else if (data.type === 'result') {
+                                    result = { success: true, data: data.data };
+                                } else if (data.type === 'error') {
+                                    result = { success: false, error: data.error };
                                 }
-                            } else if (data.success !== undefined) {
-                                result = data; // Catch standard { success: true/false } fallback
-                            } else if (data.type === 'result') {
-                                result = { success: true, data: data.data };
-                            } else if (data.type === 'error') {
-                                result = { success: false, error: data.error };
-                            }
-                        } catch (e) { /* ignore parse error on incomplete chunks */ }
+                            } catch (e) { /* ignore parse error on incomplete chunks */ }
+                        }
                     }
                 }
             } else {

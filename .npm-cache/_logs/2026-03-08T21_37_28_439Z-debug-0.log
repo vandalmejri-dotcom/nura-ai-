@@ -5,10 +5,10 @@
 4 silly config load:file:D:\nura ai\.npmrc
 5 silly config load:file:C:\Users\wafam\.npmrc
 6 silly config load:file:C:\Users\wafam\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec tsc --noEmit
-8 verbose argv "exec" "--" "tsc" "--noEmit"
-9 verbose logfile logs-max:10 dir:d:\nura ai\.npm-cache\_logs\2026-03-08T16_35_03_503Z-
-10 verbose logfile d:\nura ai\.npm-cache\_logs\2026-03-08T16_35_03_503Z-debug-0.log
+7 verbose title npm run build
+8 verbose argv "run" "build"
+9 verbose logfile logs-max:10 dir:d:\nura ai\.npm-cache\_logs\2026-03-08T21_37_28_439Z-
+10 verbose logfile d:\nura ai\.npm-cache\_logs\2026-03-08T21_37_28_439Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd D:\nura ai
