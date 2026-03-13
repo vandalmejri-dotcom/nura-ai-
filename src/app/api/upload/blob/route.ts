@@ -1,3 +1,4 @@
+// src/app/api/upload/blob/route.ts [Force Rebuild]
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 

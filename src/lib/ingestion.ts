@@ -1,5 +1,4 @@
-// @ts-ignore
-import mammoth from 'mammoth';
+import mammoth from 'mammoth'; // Force Rebuild Fix
 
 // Polyfills for pdf-parse (pdf.js) in Node.js environment
 if (typeof global.DOMMatrix === 'undefined') { (global as any).DOMMatrix = class { }; }
