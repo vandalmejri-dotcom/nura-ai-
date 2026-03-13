@@ -29,9 +29,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [link, setLink] = useState('');
     const [rawText, setRawText] = useState('');
-    const [options, setOptions] = useState<string[]>(['flashcards', 'quiz', 'notes']);
-    const [language, setLanguage] = useState('fr');
+    const [options, setOptions] = useState<string[]>(['flashcards', 'quiz_arena', 'ai_synthesis', 'fill_in_the_blanks']);
+    const [language, setLanguage] = useState('en');
     const [progress, setProgress] = useState(0);
+    const [debugMessage, setDebugMessage] = useState('Waiting for text extraction...');
     const [error, setError] = useState('');
 
     const onDrop = React.useCallback((acceptedFiles: File[]) => {
@@ -59,7 +60,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         if (fileInputRef.current) fileInputRef.current.value = '';
         setLink('');
         setRawText('');
-        setOptions(['flashcards', 'quiz', 'notes']);
+        setOptions(['flashcards', 'quiz_arena', 'ai_synthesis', 'fill_in_the_blanks']);
         setProgress(0);
         setError('');
     };
@@ -77,13 +78,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     if (!isOpen) return null;
 
     const generationOptions = [
-        { id: 'notes', label: 'Cornell Notes', desc: 'Summary & Cues' },
-        { id: 'quiz', label: 'Multiple Choice', desc: 'Deep Testing' },
+        { id: 'ai_synthesis', label: 'AI Synthesis', desc: 'Core Concepts & Mechanics' },
         { id: 'flashcards', label: 'Flashcards', desc: 'Active Recall' },
-        { id: 'podcast', label: 'Podcast Script', desc: 'Audio Learning' },
-        { id: 'tutorlesson', label: 'Tutor Lesson', desc: 'Socratic Reading' },
-        { id: 'writtentests', label: 'Written Tests', desc: 'Short Answer' },
-        { id: 'fillintheblanks', label: 'Fill in the Blanks', desc: 'Cloze Tests' },
+        { id: 'quiz_arena', label: 'Quiz Arena', desc: 'Deep Testing' },
+        { id: 'fill_in_the_blanks', label: 'Fill in the Blanks', desc: 'Cloze Tests' },
+        { id: 'podcast', label: 'Podcast', desc: 'Audio Learning' },
+        { id: 'ai_tutor', label: 'AI Tutor', desc: 'Socratic Chat' },
     ];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,17 +98,24 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     };
 
     const startProcessing = async (e?: React.FormEvent) => {
-        if (e) {
-            e.preventDefault();
-        }
+        if (e) e.preventDefault();
         setStep('processing');
         setError('');
         setProgress(5);
 
         let isSuccess = false;
+        let progressInterval: NodeJS.Timeout | null = null;
 
         try {
             let payload: any = { options, language };
+
+            // Trickle progress while waiting for backend
+            progressInterval = setInterval(() => {
+                setProgress(prev => {
+                    if (prev >= 95) return prev;
+                    return prev + (prev < 80 ? 1 : 0.2);
+                });
+            }, 400);
 
             if (selectedFile) {
                 // Direct-to-Storage upload for large files
@@ -117,36 +124,58 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     handleUploadUrl: '/api/upload/blob',
                     clientPayload: JSON.stringify({ timestamp: Date.now(), filename: selectedFile.name }),
                     onUploadProgress: (progressEvent) => {
-                        setProgress(Math.round(progressEvent.percentage * 0.8)); // 80% for upload
+                        // Keep within 0-80% for upload phase
+                        const upProg = Math.round(progressEvent.percentage * 0.8);
+                        setProgress(Math.max(upProg, 5));
                     },
                 });
                 payload.blobUrl = blob.url;
                 payload.fileName = selectedFile.name;
             } else if (link) {
                 payload.link = link;
+                setProgress(30);
             } else if (rawText) {
                 payload.text = rawText;
+                setProgress(30);
             } else {
                 throw new Error("No input provided.");
             }
 
             // Final processing step (PDF extraction + AI generation)
-            const res = await fetch(selectedFile ? '/api/upload' : '/api/link', {
+            const fetchRes = await fetch(selectedFile ? '/api/upload' : '/api/link', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || `HTTP error! status: ${res.status}`);
+            if (!fetchRes.ok) {
+                let errorDetails = "Server Error";
+                const responseText = await fetchRes.text().catch(() => "");
+                try {
+                    const data = JSON.parse(responseText);
+                    const errStr = data.error || data.message || "";
+                    
+                    if (errStr.includes('NURA_BLOCKADE') || errStr.includes('YouTube') || errStr.includes('blocking')) {
+                        errorDetails = "YouTube is aggressively blocking the automated harvester. 💡 PRO TIP: Go back, select 'Raw Text', and paste the transcript there for instant results!";
+                    } else if (errStr.includes('NO_SUBTITLES')) {
+                        errorDetails = "Mission Failed: No subtitles available for this video or access is blocked.";
+                    } else {
+                        errorDetails = errStr || errorDetails;
+                    }
+                } catch (e) {
+                    errorDetails = responseText.length > 0 && responseText.length < 200 ? responseText : "Nura Engine returned an invalid response. Access may be blocked.";
+                }
+                throw new Error(errorDetails);
             }
 
+            // Halt interval once we have a response stream or JSON
+            if (progressInterval) clearInterval(progressInterval);
+
             let result: any = null;
-            const contentType = res.headers.get('content-type');
+            const contentType = fetchRes.headers.get('content-type');
 
             if (contentType && contentType.includes('application/x-ndjson')) {
-                const reader = res.body?.getReader();
+                const reader = fetchRes.body?.getReader();
                 const decoder = new TextDecoder();
                 if (reader) {
                     let bufferChars = '';
@@ -155,55 +184,57 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                         if (done) break;
                         bufferChars += decoder.decode(value, { stream: true });
                         const lines = bufferChars.split('\n');
-                        bufferChars = lines.pop() || ''; // keep incomplete line in buffer
+                        bufferChars = lines.pop() || '';
 
                         for (const line of lines) {
                             if (!line.trim()) continue;
                             try {
                                 const data = JSON.parse(line);
                                 if (data.type === 'debug') {
-                                    (window as any).debugInfo = data;
-                                    const dbgElem = document.getElementById('debug-realtime');
-                                    if (dbgElem) {
-                                        dbgElem.innerHTML = `<strong>DEBUG:</strong> Extracted ${data.length} characters | First 150 chars: ${data.preview.substring(0, 150)} | Sent to AI: YES`;
+                                    if (data.progress) {
+                                        if (progressInterval) {
+                                            clearInterval(progressInterval);
+                                            progressInterval = null;
+                                        }
+                                        setProgress(data.progress);
                                     }
-                                } else if (data.success !== undefined) {
-                                    result = data;
-                                } else if (data.type === 'result') {
-                                    result = { success: true, data: data.data };
+                                    setDebugMessage(data.message || 'Processing...');
+                                } else if (data.success !== undefined || data.type === 'result') {
+                                    result = data.type === 'result' ? { success: true, data: data.data } : data;
                                 } else if (data.type === 'error') {
                                     result = { success: false, error: data.error };
                                 }
-                            } catch (e) { /* ignore parse error on incomplete chunks */ }
+                            } catch (e) { }
                         }
                     }
                 }
             } else {
-                result = await res.json();
+                result = await fetchRes.json().catch(() => ({ success: false, error: "Malformed server response (Broken JSON)." }));
             }
 
-            setProgress(100);
-
             if (result && result.success) {
+                setProgress(100);
                 isSuccess = true;
                 setTimeout(() => {
                     onSuccess(result.data);
                     onClose();
                     reset();
-                }, 500);
+                }, 800);
             } else {
-                throw new Error(result.error || 'Mission Failed. Try again.');
+                throw new Error(result?.error || result?.message || 'Mission Logic Error. Contact Support.');
             }
         } catch (err: any) {
-            const errorMsg = err.message || 'Network Error. Is the engine running?';
+            // Swallow dev error logging to avoid Red Screen overlay, use clear UI feedback instead
+            const errorMsg = err.message || 'Fatal Network Disruption.';
             setError(errorMsg);
             toast.error(errorMsg);
-        } finally {
-            // Clearing the 5% loading ring / processing state
+        }
+        finally {
+            if (progressInterval) clearInterval(progressInterval);
             if (!isSuccess) {
                 setStep('options');
+                setProgress(0);
             }
-            setProgress(0);
         }
     };
 
@@ -409,8 +440,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                 </div>
                             </div>
 
-                            <div id="debug-realtime" className="text-[10px] text-fuchsia-400 mt-4 p-2 bg-fuchsia-900/20 rounded border border-fuchsia-500/30 w-full max-w-sm text-left font-mono">
-                                <strong>DEBUG:</strong> Waiting for text extraction...
+                            <div className="text-[10px] text-fuchsia-400 mt-4 p-2 bg-fuchsia-900/20 rounded border border-fuchsia-500/30 w-full max-w-sm text-left font-mono">
+                                <strong>DEBUG:</strong> {debugMessage}
                             </div>
                         </div>
                     )}

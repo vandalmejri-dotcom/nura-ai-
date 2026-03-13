@@ -12,23 +12,28 @@ import {
     SpeakerHigh,
     FileText,
     Clock,
+    Check,
+    ArrowRight,
     Sparkle,
     Trash,
-    Warning,
-    Check,
-    ArrowRight
+    Warning
 } from '@phosphor-icons/react';
 import { useStudySets, StudySet } from '@/context/StudySetsContext';
 import SocraticTutor from '@/components/features/SocraticTutor';
+import RawPreviewPane from '@/components/features/RawPreviewPane';
+import FlashcardMasteryLoop from '@/components/features/FlashcardMasteryLoop';
+import QuizArena from '@/components/features/QuizArena';
+import FillInTheBlanks from '@/components/features/FillInTheBlanks';
+import ReactMarkdown from 'react-markdown';
 
-type Tab = 'notes' | 'flashcards' | 'quiz' | 'podcast' | 'tutor';
+type Tab = 'notes' | 'synthesis' | 'flashcards' | 'quiz' | 'podcast' | 'tutor' | 'fillInTheBlanks';
 
 export default function StudySetDetail() {
     const { id } = useParams();
     const router = useRouter();
     const { sets, deleteSet, loading } = useStudySets();
     const [set, setSet] = useState<StudySet | null>(null);
-    const [activeTab, setActiveTab] = useState<Tab>('notes');
+    const [activeTab, setActiveTab] = useState<Tab>('synthesis');
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -39,6 +44,27 @@ export default function StudySetDetail() {
         }
     }, [id, sets, loading]);
 
+    const tabs = React.useMemo(() => [
+        { id: 'synthesis', label: 'AI Synthesis', icon: Sparkle, disabled: !set?.synthesizedNotes },
+        { id: 'notes', label: 'Raw Input', icon: FileText, disabled: false },
+        { id: 'flashcards', label: 'Flashcards', icon: Cards, disabled: !set?.flashcards || set?.flashcards.length === 0 },
+        { id: 'quiz', label: 'Quiz Arena', icon: Exam, disabled: !set?.quiz || set?.quiz.length === 0 },
+        { id: 'fillInTheBlanks', label: 'Fill in the Blanks', icon: FileText, disabled: !set?.fillInTheBlanks || set?.fillInTheBlanks.length === 0 },
+        { id: 'podcast', label: 'Podcast', icon: SpeakerHigh, disabled: !set?.podcast },
+        { id: 'tutor', label: 'AI Tutor', icon: ChatTeardropDots, disabled: !set?.tutorLesson },
+    ], [set, activeTab]);
+
+    // Select the first enabled tab if the current one is disabled or not set
+    useEffect(() => {
+        if (set) {
+            const currentTab = tabs.find(t => t.id === activeTab);
+            if (!currentTab || currentTab.disabled) {
+                const firstAvailable = tabs.find(t => !t.disabled);
+                if (firstAvailable) setActiveTab(firstAvailable.id as Tab);
+            }
+        }
+    }, [set, tabs, activeTab]);
+
     if (!mounted || loading) return <div className="animate-pulse glass-dark h-screen rounded-3xl" />;
     if (!set) return (
         <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -48,15 +74,6 @@ export default function StudySetDetail() {
             </button>
         </div>
     );
-
-    const tabs = [
-        { id: 'notes', label: 'Cornell Notes', icon: FileText, disabled: !set.notes },
-        { id: 'flashcards', label: 'Flashcards', icon: Cards, disabled: !set.flashcards },
-        { id: 'quiz', label: 'Quiz Arena', icon: Exam, disabled: !set.quiz },
-        { id: 'fillInTheBlanks', label: 'Fill in the Blanks', icon: FileText, disabled: !set.fillInTheBlanks },
-        { id: 'podcast', label: 'Podcast', icon: SpeakerHigh, disabled: !set.podcast },
-        { id: 'tutor', label: 'AI Tutor', icon: ChatTeardropDots, disabled: false },
-    ];
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-slide-up pb-20">
@@ -96,18 +113,18 @@ export default function StudySetDetail() {
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-2 p-1.5 glass-dark rounded-2xl border-white/5 w-fit">
+            <div className="flex items-center gap-1.5 p-1.5 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/5 w-fit shadow-2xl">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         disabled={tab.disabled}
                         onClick={() => setActiveTab(tab.id as Tab)}
-                        className={`flex items-center gap-2.5 px-5 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === tab.id
-                            ? 'bg-white/10 text-fuchsia-400'
-                            : tab.disabled ? 'opacity-30 cursor-not-allowed' : 'text-zinc-500 hover:text-zinc-300'
+                        className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-widest ${activeTab === tab.id
+                            ? 'bg-gradient-to-br from-fuchsia-500/20 to-violet-500/10 text-fuchsia-400 border border-fuchsia-500/20 shadow-[0_0_20px_rgba(217,70,239,0.15)]'
+                            : tab.disabled ? 'opacity-20 cursor-not-allowed' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                             }`}
                     >
-                        <tab.icon size={20} weight={activeTab === tab.id ? 'fill' : 'regular'} />
+                        <tab.icon size={18} weight={activeTab === tab.id ? 'fill' : 'bold'} />
                         {tab.label}
                     </button>
                 ))}
@@ -118,35 +135,101 @@ export default function StudySetDetail() {
                 {/* Background Glow */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fuchsia-500/5 blur-[120px] rounded-full -z-10" />
 
-                {activeTab === 'notes' && (
+                {activeTab === 'synthesis' && (
                     <div className="prose prose-invert max-w-none space-y-8 animate-slide-up">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-xl bg-fuchsia-500/20 flex items-center justify-center text-fuchsia-400">
-                                <FileText weight="bold" size={24} />
-                            </div>
-                            <h2 className="text-2xl font-bold m-0 italic">Mission <span className="text-gradient">Briefing</span></h2>
+                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                            <div className="text-sm font-bold text-violet-500">{set.stats?.quizCount || 0}</div>
+                            <div className="text-[10px] font-bold text-violet-500/60 uppercase tracking-widest">Questions</div>
                         </div>
-                        <div className="text-zinc-300 leading-relaxed text-lg whitespace-pre-wrap">
-                            {set.notes}
+                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                            <div className="text-sm font-bold text-emerald-500">{set.stats?.fibCount || 0}</div>
+                            <div className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest">Cloze Tests</div>
+                        </div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400">
+                                <Sparkle weight="bold" size={24} />
+                            </div>
+                            <h2 className="text-2xl font-bold m-0 italic text-gradient">AI Synthesis <span className="text-zinc-400 text-sm font-normal not-italic ml-2">(Optimized for Recall)</span></h2>
+                        </div>
+                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[40px] p-10 md:p-16 lg:p-24 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-fuchsia-500/50 to-transparent opacity-30" />
+                            {set.synthesizedNotes ? (
+                                <div className="relative z-10 transition-all duration-700 synthesized-content">
+                                    <ReactMarkdown>
+                                        {set.synthesizedNotes}
+                                    </ReactMarkdown>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
+                                    <Sparkle size={48} weight="thin" className="animate-pulse" />
+                                    <p className="font-bold italic text-zinc-500">Synthesizing intelligence... (Initial generation takes 5-10s)</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
+                {activeTab === 'notes' && (
+                    <div className="space-y-8 animate-slide-up">
+                        <RawPreviewPane
+                            sourceUrl={set.sourceUrl}
+                            rawContent={set.rawContent || set.sourceContent}
+                            fileName={set.sourceName}
+                        />
+                    </div>
+                )}
+
                 {activeTab === 'flashcards' && (
-                    <div className="h-full flex flex-col items-center justify-center animate-slide-up pt-10">
-                        <FlashcardPlayer cards={set.flashcards || []} />
+                    <div className="flex flex-col items-center justify-center py-10">
+                        <FlashcardMasteryLoop
+                            cards={set.flashcards || []}
+                            setId={set.id}
+                            language={set.detectedLanguage || 'en'}
+                        />
                     </div>
                 )}
 
                 {activeTab === 'quiz' && (
                     <div className="h-full animate-slide-up">
-                        <QuizArena quiz={set.quiz || []} />
+                        <QuizArena quiz={set.quiz || []} set={set} />
                     </div>
                 )}
 
                 {activeTab === 'fillInTheBlanks' as Tab && (
                     <div className="h-full animate-slide-up">
-                        <FillInTheBlanksArena items={(set.fillInTheBlanks as any[]) || []} />
+                        {set.fillInTheBlanks && set.fillInTheBlanks.length > 0 ? (
+                            <FillInTheBlanks
+                                questions={set.fillInTheBlanks || []}
+                                setId={set.id}
+                                language={set.detectedLanguage || 'en'}
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
+                                <Warning size={48} weight="thin" className="animate-pulse" />
+                                <div className="text-center">
+                                    <p className="font-bold italic text-zinc-500">No Fill in the Blanks exercises available.</p>
+                                    <p className="text-sm opacity-50">Launch a new mission with 'Fill in the Blanks' option enabled.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'podcast' && (
+                    <div className="prose prose-invert max-w-none animate-slide-up">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                <SpeakerHigh weight="bold" size={24} />
+                            </div>
+                            <h2 className="text-2xl font-bold m-0 italic text-gradient">AI Podcast Script <span className="text-zinc-400 text-sm font-normal not-italic ml-2">(Conversational Learning)</span></h2>
+                        </div>
+                        <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] p-12 shadow-2xl relative overflow-hidden">
+                            <div className="prose prose-invert max-w-none leading-relaxed">
+                                <ReactMarkdown>
+                                    {set.podcast || "No podcast script generated for this mission."}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -163,205 +246,3 @@ export default function StudySetDetail() {
     );
 }
 
-/* Sub-components for players */
-function FlashcardPlayer({ cards }: { cards: any[] }) {
-    const [index, setIndex] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
-    const [syncing, setSyncing] = useState(false);
-
-    if (!cards.length) return <div>No cards generated for this mission.</div>;
-
-    const current = cards[index];
-
-    const handleMasteryFeedback = async (quality: number) => {
-        setSyncing(true);
-        try {
-            await fetch('/api/spaced-repetition', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    artifactId: current.id || `local_card_${index}`,
-                    quality
-                })
-            });
-        } catch (error) {
-            console.error('Failed to sync mastery data:', error);
-        } finally {
-            setSyncing(false);
-            if (index < cards.length - 1) {
-                setIndex(index + 1);
-                setIsFlipped(false);
-            }
-        }
-    };
-
-    return (
-        <div className="w-full max-w-2xl space-y-10">
-            <div
-                className="relative h-96 w-full cursor-pointer perspective-1000 group"
-                onClick={() => setIsFlipped(!isFlipped)}
-            >
-                <div className={`relative w-full h-full transition-all duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-                    {/* Front */}
-                    <div className="absolute inset-0 backface-hidden glass-dark border-white/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-                        <span className="text-[10px] font-bold text-fuchsia-500 uppercase tracking-widest mb-6">Question {index + 1}/{cards.length}</span>
-                        <div className="text-2xl font-bold leading-tight text-white">{current.front || current.question}</div>
-                        <div className="absolute bottom-10 text-xs text-zinc-500 italic opacity-0 group-hover:opacity-100 transition-opacity">Click to Reveal Synthesis</div>
-                    </div>
-                    {/* Back */}
-                    <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-fuchsia-500/20 rounded-3xl p-10 flex flex-col items-center justify-between text-center">
-                        <span className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest italic">Synthesized Insight</span>
-                        <div className="text-xl font-medium text-zinc-100 leading-relaxed overflow-y-auto no-scrollbar my-4">{current.back || current.answer}</div>
-
-                        {/* Spaced Repetition Controls */}
-                        <div className="grid grid-cols-4 w-full gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-                            <button disabled={syncing} onClick={() => handleMasteryFeedback(0)} className="py-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-xs uppercase transition-colors">Forgot</button>
-                            <button disabled={syncing} onClick={() => handleMasteryFeedback(1)} className="py-2.5 rounded-xl bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold text-xs uppercase transition-colors">Hard</button>
-                            <button disabled={syncing} onClick={() => handleMasteryFeedback(2)} className="py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold text-xs uppercase transition-colors">Good</button>
-                            <button disabled={syncing} onClick={() => handleMasteryFeedback(3)} className="py-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 font-bold text-xs uppercase transition-colors">Easy</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-6">
-                <button
-                    disabled={index === 0}
-                    onClick={() => { setIndex(index - 1); setIsFlipped(false); }}
-                    className="p-4 rounded-full glass hover:bg-white/10 text-zinc-400 disabled:opacity-20 translate-all"
-                >
-                    <ArrowLeft size={24} weight="bold" />
-                </button>
-                <div className="font-bold text-zinc-600 uppercase tracking-widest text-xs">
-                    Mastery Progress: {Math.round(((index + 1) / cards.length) * 100)}%
-                </div>
-                <button
-                    disabled={index === cards.length - 1}
-                    onClick={() => { setIndex(index + 1); setIsFlipped(false); }}
-                    className="p-4 rounded-full glass hover:bg-white/10 text-zinc-400 disabled:opacity-20 transition-all"
-                >
-                    <ArrowLeft size={24} weight="bold" className="rotate-180" />
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function QuizArena({ quiz }: { quiz: any[] }) {
-    const [index, setIndex] = useState(0);
-    const [selected, setSelected] = useState<number | null>(null);
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [score, setScore] = useState(0);
-    const [finished, setFinished] = useState(false);
-
-    if (!quiz.length) return <div>No quiz data for this mission.</div>;
-    if (finished) return (
-        <div className="flex flex-col items-center justify-center h-[50vh] space-y-6 text-center">
-            <div className="w-24 h-24 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
-                <Sparkle size={48} weight="fill" />
-            </div>
-            <div>
-                <h3 className="text-3xl font-extrabold">Mission Success</h3>
-                <p className="text-zinc-500">You scored {score}/{quiz.length} in the Arena.</p>
-            </div>
-            <button onClick={() => { setIndex(0); setScore(0); setFinished(false); }} className="px-8 py-3 rounded-2xl bg-zinc-100 text-black font-bold">Restart Arena</button>
-        </div>
-    );
-
-    const current = quiz[index];
-
-    const handleSelect = (idx: number) => {
-        if (isCorrect) return; // Already answered correctly
-        setSelected(idx);
-        const correct = idx === (current.correctAnswer ?? current.correctAnswerIndex);
-        setIsCorrect(correct);
-        if (correct) setScore(score + 1);
-    };
-
-    const next = () => {
-        if (index === quiz.length - 1) {
-            setFinished(true);
-        } else {
-            setIndex(index + 1);
-            setSelected(null);
-            setIsCorrect(null);
-        }
-    };
-
-    return (
-        <div className="max-w-3xl mx-auto space-y-10 py-6">
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Bloom's Taxonomy Level: {current.level || 'Deep Analysis'}</span>
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Question {index + 1}/{quiz.length}</span>
-                </div>
-                <h3 className="text-2xl font-bold leading-tight">{current.question}</h3>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-                {current.options.map((opt: string, i: number) => (
-                    <button
-                        key={i}
-                        onClick={() => handleSelect(i)}
-                        className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${selected === i
-                            ? (isCorrect ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200' : 'bg-red-500/10 border-red-500/50 text-red-200')
-                            : selected !== null && i === (current.correctAnswer ?? current.correctAnswerIndex)
-                                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200'
-                                : 'bg-white/5 border-white/5 hover:border-white/20 text-zinc-400'
-                            }`}
-                    >
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${selected === i ? 'bg-white/10' : 'bg-zinc-800 group-hover:bg-zinc-700'
-                                }`}>
-                                {String.fromCharCode(65 + i)}
-                            </div>
-                            {opt}
-                        </div>
-                        {selected === i && isCorrect === false && (
-                            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-red-500 animate-pulse">
-                                <Warning size={24} weight="fill" />
-                            </div>
-                        )}
-                        {((selected === i && isCorrect) || (selected !== null && i === (current.correctAnswer ?? current.correctAnswerIndex))) && (
-                            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 animate-bounce">
-                                <Check size={24} weight="bold" />
-                            </div>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            {selected !== null && (
-                <div className="flex flex-col items-center space-y-6 pt-4 animate-slide-up">
-                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-sm text-zinc-300 italic text-center w-full">
-                        <span className="font-bold text-zinc-500 block mb-2 uppercase tracking-widest text-[10px]">Scientific Rationale</span>
-                        {current.explanation ?? current.rationale ?? "The correct physiological response relies on the structural integrity of the human's architectural instruction."}
-                    </div>
-                    <button disabled={!isCorrect} onClick={next} className="w-full py-5 rounded-2xl bg-zinc-100 text-black font-extrabold text-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-[0.98]">
-                        {index === quiz.length - 1 ? 'Finalize Mission' : 'Advance to Next Phase'} <ArrowRight weight="bold" />
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function FillInTheBlanksArena({ items }: { items: any[] }) {
-    if (!items?.length) return <div>No Fill in the Blanks data generated.</div>;
-    return (
-        <div className="max-w-3xl mx-auto space-y-6 pt-10 animate-slide-up">
-            <h3 className="text-2xl font-bold mb-8">Exercices à Trous</h3>
-            {items.map((item, idx) => (
-                <div key={idx} className="p-6 rounded-2xl glass-dark border border-white/10 space-y-4">
-                    <p className="text-lg font-medium tracking-wide leading-relaxed">
-                        {item.sentence}
-                    </p>
-                    <div className="mt-4 pt-4 border-t border-white/10 text-sm">
-                        <p className="text-fuchsia-400 font-bold">Réponse: <span className="text-white ml-2">{item.answer}</span></p>
-                        {item.hint && <p className="text-zinc-500 italic mt-1">Indice: {item.hint}</p>}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}

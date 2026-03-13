@@ -310,35 +310,46 @@ export async function smartGenerate(prompt: string, jsonMode: boolean, preferenc
 }
 
 export const generateStudySet = async (fileName: string, fileContent: string, options: string[] = [], language = 'en') => {
-    // CoT: Hypothesis: Generate everything in one Groq call. Cons: Prompt drift, schema violations.
-    // Selected: Call generateTextAnalysis in parallel for each selected option to ensure 100% adherence to single-type 4-stage schema.
-    let hasFlashcards = options.includes('flashcards') || options.length === 0;
-    let hasQuiz = options.includes('quiz') || options.length === 0;
-    let hasNotes = options.includes('notes');
-    let hasTutorLesson = options.includes('tutorlesson');
-    let hasFillInTheBlanks = options.includes('fillintheblanks');
+    // LLM Optimization: Only generate modules selected by the user
+    // Terms: AI Synthesis, Flashcards, Quiz Arena, Fill in the Blanks, Podcast, AI Tutor
+    const hasFlashcards = options.includes('flashcards') || options.length === 0;
+    const hasQuiz = options.includes('quiz_arena') || options.length === 0;
+    const hasSynthesis = options.includes('ai_synthesis') || options.length === 0;
+    const hasFillInTheBlanks = options.includes('fill_in_the_blanks') || options.length === 0;
+    const hasAITutor = options.includes('ai_tutor');
+    const hasPodcast = options.includes('podcast');
 
-    const promises: Promise<{ key: string, data: any }>[] = [];
+    const promises: Promise<{ key: string, data: any, language?: string }>[] = [];
 
     if (hasFlashcards) {
         promises.push(generateTextAnalysis(fileContent, "flashcards", "Génère des flashcards (front/back)", false)
-            .then(res => ({ key: 'flashcards', data: res.data?.items })));
+            .then(res => ({ key: 'flashcards', data: res.data?.items, language: res.data?.detectedLanguage })));
     }
     if (hasQuiz) {
-        promises.push(generateTextAnalysis(fileContent, "quiz", "Génère un quiz à choix multiples", false)
-            .then(res => ({ key: 'quiz', data: res.data?.items })));
+        promises.push(generateTextAnalysis(fileContent, "quiz", "Génère un quiz à choix multiples (Deep Testing)", false)
+            .then(res => ({ key: 'quiz', data: res.data?.items, language: res.data?.detectedLanguage })));
     }
-    if (hasNotes) {
-        promises.push(generateTextAnalysis(fileContent, "cornell", "Génère des notes Cornell", false)
-            .then(res => ({ key: 'notes', data: res.data?.items?.length ? res.data?.items[0] : res.data?.items })));
-    }
-    if (hasTutorLesson) {
-        promises.push(generateTextAnalysis(fileContent, "tutor_response", "Crée une introduction socratique", false)
-            .then(res => ({ key: 'tutorLesson', data: res.data?.items })));
+    if (hasSynthesis) {
+        promises.push(generateTextAnalysis(fileContent, "synthesized_notes", "Transforme ce contenu en notes synthétisées structurées (Core Mechanics)", true)
+            .then(res => ({ key: 'synthesizedNotes', data: res.data?.items, language: res.data?.detectedLanguage })));
     }
     if (hasFillInTheBlanks) {
-        promises.push(generateTextAnalysis(fileContent, "fill_in_blanks", "Génère un exercice à trous", false)
-            .then(res => ({ key: 'fillInTheBlanks', data: res.data?.items })));
+        promises.push(generateTextAnalysis(fileContent, "fill_in_blanks", "Génère un exercice à trous (Cloze test/FIB).", false)
+            .then(res => {
+                let data = res.data?.items;
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    data = data.items || data.questions || Object.values(data).find(Array.isArray) || [];
+                }
+                return { key: 'fillInTheBlanks', data: Array.isArray(data) ? data : [], language: res.data?.detectedLanguage };
+            }));
+    }
+    if (hasAITutor) {
+        promises.push(generateTextAnalysis(fileContent, "tutor_response", "Crée une introduction socratique interactive (AI Tutor)", false)
+            .then(res => ({ key: 'tutorLesson', data: res.data?.items, language: res.data?.detectedLanguage })));
+    }
+    if (hasPodcast) {
+        promises.push(generateTextAnalysis(fileContent, "analysis", "Génère un script de podcast court entre deux experts sur ce sujet.", false)
+            .then(res => ({ key: 'podcast', data: res.data?.items?.response || res.data?.items?.text || res.data?.items, language: res.data?.detectedLanguage })));
     }
 
     const results = await Promise.allSettled(promises);
@@ -354,24 +365,34 @@ export const generateStudySet = async (fileName: string, fileContent: string, op
             characterCount: fileContent.length,
             cardCount: 0,
             quizCount: 0,
+            fibCount: 0,
         },
         flashcards: null,
         quiz: null,
-        notes: null,
         tutorLesson: null,
-        fillInTheBlanks: null
+        fillInTheBlanks: null,
+        synthesizedNotes: null,
+        podcast: null,
+        masteryTiers: { Unfamiliar: 0, Learning: 0, Familiar: 0, Mastered: 0 }
     };
 
     results.forEach(res => {
-        if (res.status === 'fulfilled' && !res.value.data?.error) {
+        if (res.status === 'fulfilled' && res.value && !res.value.data?.error) {
             output[res.value.key] = res.value.data;
+            if (res.value.language && !output.detectedLanguage) {
+                output.detectedLanguage = res.value.language;
+            }
         } else if (res.status === 'rejected') {
             console.error(`Error generating one of the parts:`, res.reason);
         }
     });
 
-    output.stats.cardCount = output.flashcards?.length || 0;
-    output.stats.quizCount = output.quiz?.length || 0;
+    if (output.flashcards) output.stats.cardCount = output.flashcards.length;
+    if (output.quiz) output.stats.quizCount = output.quiz.length;
+    if (output.fillInTheBlanks) output.stats.fibCount = output.fillInTheBlanks.length;
+
+    // Set initial mastery tiers
+    output.masteryTiers.Unfamiliar = (output.flashcards?.length || 0) + (output.quiz?.length || 0) + (output.fillInTheBlanks?.length || 0);
 
     return output;
 };
@@ -399,57 +420,223 @@ export async function checkProviderStatus() {
 }
 
 export const chatTutor = async (context: string, documentContent: string, userMessage: string) => {
-    const fullQuery = `Historique de conversation:\n${context}\n\nMessage actuel de l'étudiant:\n${userMessage}`;
-    const result = await generateTextAnalysis(documentContent, "tutor_response", fullQuery, true);
+    // History handling: Inject last 3 user messages (context is already formatted)
+    const isEnglish = /[a-zA-Z]/.test(userMessage) && !/[éàèêëîïôûùç]/.test(userMessage.toLowerCase());
+    const langInstruction = isEnglish ? "Please respond in English." : "Réponds en Français.";
 
-    // Formatting the JSON output to text for the frontend component (since frontend expects a string reply in API)
-    // Or we can return JSON and let frontend format it. Let's return the string format or JSON.
-    // The instructions say EVERY generation must return STRICTLY VALID JSON. So the API returns JSON.
-    // We'll return the parsed object from generateTextAnalysis.
+    const fullQuery = `
+History of conversation:
+${context}
 
-    let replyText = "";
-    if (result.data?.items) {
-        const item = Array.isArray(result.data.items) ? result.data.items[0] : result.data.items;
-        if (item.response) replyText += item.response + "\n\n";
-        if (item.nextQuestion) replyText += "*" + item.nextQuestion + "*";
-        if (!replyText && item) replyText = typeof item === 'string' ? item : JSON.stringify(item);
-    } else if (result.error) {
-        replyText = "Erreur: " + result.error;
-    } else {
-        replyText = "Aucune réponse générée.";
+Current user message:
+"${userMessage}"
+
+${langInstruction}
+`;
+
+    const attemptChat = async (query: string, useQuality: boolean) => {
+        const result = await generateTextAnalysis(documentContent, "tutor_response", query, useQuality);
+
+        let replyText = "";
+        if (result.data?.items) {
+            const item = result.data.items;
+
+            if (item.response) replyText += item.response + "\n\n";
+
+            if (item.nextQuestion) {
+                if (Array.isArray(item.nextQuestion)) {
+                    replyText += item.nextQuestion.map((q: string) => `• ${q}`).join("\n");
+                } else {
+                    replyText += `*${item.nextQuestion}*`;
+                }
+            }
+
+            if (!replyText && item.text) replyText = item.text;
+        }
+        return { replyText, provider: result.provider };
+    };
+
+    try {
+        let { replyText, provider } = await attemptChat(fullQuery, true);
+
+        // Fallback: Retry once with shorter prompt if empty
+        if (!replyText || replyText.includes("Aucune réponse générée")) {
+            console.log("🔄 Tutor fallback triggered: retry with shorter context...");
+            const shorterQuery = `User says: "${userMessage}". Answer and ask a follow-up. ${langInstruction}`;
+            const retry = await attemptChat(shorterQuery, false);
+            replyText = retry.replyText;
+            provider = retry.provider;
+        }
+
+        if (!replyText) {
+            const concepts = documentContent.substring(0, 500).split(' ').filter(w => w.length > 5).slice(0, 3);
+            const fallbackConcept = concepts.length > 0 ? concepts[Math.floor(Math.random() * concepts.length)] : "this material";
+            replyText = isEnglish
+                ? `Let's break it down together. Thinking about ${fallbackConcept}, how would you explain its impact based on what we've read?`
+                : `Voyons cela ensemble. En pensant à "${fallbackConcept}", comment expliquerais-tu son impact d'après ce que nous avons lu ?`;
+        }
+
+        return replyText;
+    } catch (error) {
+        console.error("Tutor Chat Error:", error);
+        return "*(System)* Connection to the AI brain disrupted. Rephrasing might help.";
     }
-
-    // Embed progress info in text for now, or just return text
-    return `*(✨ Propulsé par ${result.provider})*\n\n${replyText}`;
 };
 
-const CENTRAL_SYSTEM_PROMPT = `Tu es un tuteur pédagogique expert français, précis, rigoureux et inspiré de Studley AI. Adopte ce rôle strictement: un éducateur socratique qui guide l'étudiant via questions actives pour favoriser le rappel actif, sans jamais révéler les réponses directement sauf si demandé explicitement après tentative.
-Tu analyses UNIQUEMENT le texte fourni par l'étudiant. Tu ne devines jamais, tu n'hallucines jamais, tu ne parles jamais de toi-même, de Nura AI, ou de tout sujet externe. Si quelque chose n'est pas dans le texte, retourne IMMÉDIATEMENT {"error": "Pas dans le texte fourni"}.
-Pense étape par étape (chain-of-thought): 1. Identifie les concepts clés du texte. 2. Vérifie si la requête est couverte. 3. Génère 2-3 variantes de réponse. 4. Sélectionne la meilleure (self-consistency). 5. Valide contre schémas Zod.
-Réponds EXCLUSIVEMENT avec un objet JSON valide et rien d'autre :
+const CENTRAL_SYSTEM_PROMPT = `You are "Nura AI Content Engine". 
+STRICT RULES:
+1. GROUNDING: Use ONLY the provided text. Strictly forbidden from mentioning 'Antigravity' or the developer's background.
+2. TONE: Expert, pedagogical, ultra-precise.
+3. LANGUAGE: Detect the User's input language. Output the ISO code (e.g., 'en', 'fr', 'es') in the "detectedLanguage" key.
+4. FORMAT: Output STRICTLY VALID JSON.`;
+
+const TUTOR_SYSTEM_PROMPT = `You are Nura AI's Socratic Instructor.
+STRICT NEGATIVE CONSTRAINT: You are strictly forbidden from discussing 'Antigravity', 'physics projects', or the developer's background.
+
+Core rules:
+1. GROUNDING: Base answers EXCLUSIVELY on the provided lesson content.
+2. INTENT: 
+   - Direct question: Answer clearly + one Socratic follow-up.
+   - "Test me": 1-3 targeted recall questions.
+3. TONE: Encouraging, professional, simple language.
+
+JSON STRUCTURE:
 {
-  "type": "flashcards" | "quiz" | "cornell" | "tutor_response" | "analysis" | "fill_in_blanks",
-  "items": array of objects (strictly 3-10 items max, grounded in text),
-  "progress": {
-    "currentStage": "unfamiliar" | "learning" | "familiar" | "mastery",
-    "score": number between 0-100,
-    "nextStageUnlocked": boolean,
-    "pipelineBars": array of {stage: string, completed: boolean}
-  },
-  "error": string (only if applicable)
+  "response": "...",
+  "nextQuestion": "...",
+  "error": "..."
+}`;
+
+export const QUIZ_ARENA_MASTER_PROMPT = `You are Nura AI's ELITE assessment engine.
+STRICT NEGATIVE CONSTRAINT: NEVER mention 'Antigravity', 'physics projects', or the developer.
+
+CORE MISSION:
+Generate a high-tier multiple-choice quiz based EXCLUSIVELY on the [USER_INPUT].
+
+STRICT SCHEMA RULES:
+1. EXACTLY 4 OPTIONS: Every question MUST have exactly 4 options. No more, no less.
+2. NO EMPTY ANSWERS: "text" keys must never be empty or generic placeholders.
+3. VERIFIABLE CORRECTNESS: Exactly one option must have "isCorrect": true.
+4. TECHNICAL DEPTH: Match the technical level of the input text.
+
+JSON STRUCTURE (MANDATORY):
+{
+  "screenType": "question",
+  "quizTitle": "Technical Title",
+  "bloomLevel": "DEEP ANALYSIS",
+  "questionNumber": "1/X",
+  "questionText": "...",
+  "options": [
+    {"id": 1, "text": "DISTINCT OPTION A", "isCorrect": false},
+    {"id": 2, "text": "DISTINCT OPTION B", "isCorrect": true},
+    {"id": 3, "text": "DISTINCT OPTION C", "isCorrect": false},
+    {"id": 4, "text": "DISTINCT OPTION D", "isCorrect": false}
+  ],
+  "correctAnswerId": 2,
+  "explanation": "Detailed explanation of why B is correct based on the text.",
+  "motivationalMessage": "..."
+}`;
+
+export const QUIZ_ARENA_ENGINE_PROMPT = QUIZ_ARENA_MASTER_PROMPT;
+
+export const FILL_IN_THE_BLANKS_PROMPT = `You are Nura AI's Concept Isolation Engine. 
+STRICT RULE: You are strictly forbidden from discussing 'Antigravity' or the developer.
+
+GOAL:
+Identify CRITICAL concepts and replace them with a blank.
+
+STRICT CONSTRAINTS:
+1. SINGLE BLANK ONLY: Each exercise MUST contain exactly ONE "____". Multiple blanks are strictly forbidden.
+2. IMPACT: Choose the most representative keyword for the concept.
+3. CONTEXT: The surrounding text must make it possible to deduce the answer.
+
+JSON STRUCTURE:
+{
+  "type": "fill_in_blanks",
+  "items": [
+    {
+      "id": "uuid",
+      "textWithBlank": "The ____ is the central component of cell respiration.",
+      "correctAnswer": "mitochondria",
+      "hint": "It provides ATP."
+    }
+  ]
+}`;
+
+export const SYNTHESIZED_NOTES_PROMPT = `You are the Lead Information Architect for Nura AI. Your objective is to take raw, unstructured user input and transform it into highly optimized, readable, and structured study notes.
+
+Output Constraints:
+- NO JSON. You must output pure, clean Markdown.
+- Zero Fluff. Strip away redundant words. Maximize the signal-to-noise ratio.
+- Language Matching: You must generate the notes in the same language as the user's raw input.
+
+Structural Framework (Always follow this exact format):
+
+### 🧠 Core Concept (TL;DR)
+(Provide a single, powerful sentence summarizing the absolute fundamental truth of the text.)
+
+### 📌 Key Mechanics & Insights
+(Break down the text into 3-5 logical bullet points. Use bolding for critical terms. If there are processes or steps, use numbered lists.)
+
+### 🌍 Real-World Application / Context
+(Provide a brief explanation of how this concept is used in practice, drawing strictly from the provided text.)
+
+Execution: Analyze the provided text and immediately output the synthesized notes using the Markdown framework above.`;
+
+// --- REUSABLE VALIDATION HELPERS ---
+export function validateQuizItem(item: any): any | null {
+    if (!item || typeof item !== 'object') return null;
+    
+    // Normalize options
+    let options = item.options || item.choices || [];
+    if (!Array.isArray(options)) return null;
+
+    // Force precisely 4 options
+    if (options.length < 4) return null;
+    if (options.length > 4) options = options.slice(0, 4);
+
+    const validOptions = options.map((opt: any, idx: number) => {
+        const text = opt.text || opt.answer || opt.option || "";
+        return {
+            id: opt.id || (idx + 1),
+            text: text.toString().trim(),
+            isCorrect: !!opt.isCorrect
+        };
+    });
+
+    // Ensure all options have text
+    if (validOptions.some((o: any) => !o.text)) return null;
+
+    // Ensure at least one correct answer
+    const hasCorrect = validOptions.some((o: any) => o.isCorrect);
+    let correctAnswerId = item.correctAnswerId;
+    
+    if (!hasCorrect) {
+        // Fallback: try to find by ID if provided, or take first
+        if (correctAnswerId !== undefined) {
+            const found = validOptions.find((o: any) => o.id === correctAnswerId);
+            if (found) found.isCorrect = true;
+            else (validOptions[0] as any).isCorrect = true;
+        } else {
+            (validOptions[0] as any).isCorrect = true;
+        }
+    }
+
+    // Re-sync correctAnswerId
+    const finalCorrect = validOptions.find((o: any) => o.isCorrect);
+    correctAnswerId = finalCorrect ? finalCorrect.id : validOptions[0].id;
+
+    return {
+        ...item,
+        questionText: item.questionText || item.question || "Neural Probe Missing Content",
+        options: validOptions,
+        correctAnswerId,
+        explanation: item.explanation || item.rationale || "The conceptual bridge for this probe has been mapped."
+    };
 }
-Règles strictes et exemples (few-shot):
-- Flashcards: Toujours tableau d'objets { "front": "Question claire et précise en français", "back": "Réponse complète et exacte en français, avec explication courte" } — jamais juste une question. Exemple: [{"front": "Qu'est-ce que la photosynthèse?", "back": "Processus par lequel les plantes convertissent la lumière en énergie, selon le texte."}]
-- Quiz: Toujours 4 choix (array de strings) + "correctAnswer": index (0-3) + "explanation": string courte en français. Exemple: {"question": "Capitale de la France?", "options": ["Paris", "Londres", "Berlin", "Madrid"], "correctAnswer": 0, "explanation": "Selon le texte, Paris est la capitale."}
-- Cornell: { "cues": array de questions clés, "notes": string détaillé, "summary": string court, tout en français }
-- Tutor: Réponse socratique courte en français + une question de rappel active pour faire avancer le stage. Exemple: {"response": "Pense à ce que dit le texte sur X. Quelle est ta réponse?", "nextQuestion": "Explique Y en tes mots."}
-- Fill-in-blanks: Tableau d'objets { "sentence": "Phrase avec _____", "answer": "Réponse exacte", "hint": "Indice du texte" }
-- Analysis: Résumé structuré avec points clés, tout en français.
-Toujours respecter les 4 stages: L'utilisateur doit répondre correctement (valider via comparaison) pour passer au stage suivant; inclure logique de progression dans JSON.
-Si le texte est en français, tout en français. Limite à contenu éducatif, précis, engageant. Constraints: Pas plus de 500 tokens par item, éviter répétitions.`;
 
 export const UnifiedOutputSchema = z.object({
-    type: z.enum(["flashcards", "quiz", "cornell", "tutor_response", "analysis", "fill_in_blanks"]),
+    type: z.enum(["flashcards", "quiz", "cornell", "tutor_response", "analysis", "fill_in_blanks", "synthesized_notes"]),
     items: z.any().optional(),
     progress: z.object({
         currentStage: z.enum(["unfamiliar", "learning", "familiar", "mastery"]),
@@ -460,26 +647,41 @@ export const UnifiedOutputSchema = z.object({
             completed: z.boolean()
         }))
     }).optional(),
+    detectedLanguage: z.string().optional(),
     error: z.string().optional()
 });
 
 export async function generateTextAnalysis(
     text: string,
-    requestedType: "flashcards" | "quiz" | "cornell" | "tutor_response" | "analysis" | "fill_in_blanks" = "analysis",
+    requestedType: "flashcards" | "quiz" | "cornell" | "tutor_response" | "analysis" | "fill_in_blanks" | "synthesized_notes" = "analysis",
     userQuery: string = "",
     useQualityModel: boolean = false
-) {
-    // Chain-of-thought: 
-    // Hypothesis 1: Injecting only the user query without the requested type. Pros: Simple. Cons: The model might output the wrong schema type.
-    // Hypothesis 2: Injecting the exact requestedType and forcing JSON mode. Pros: Guaranteed structure, strong grounding. Cons: Requires strict Zod validation.
-    // Selected: Hypothesis 2, using the central prompt and explicit type injection to ensure 0 hallucinations and exact format.
-
+): Promise<{ provider: string; data?: any; error?: string }> {
     let modelPreference = useQualityModel
         ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
         : ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
 
+    const basePrompt = requestedType === "tutor_response"
+        ? TUTOR_SYSTEM_PROMPT
+        : requestedType === "synthesized_notes"
+            ? SYNTHESIZED_NOTES_PROMPT
+            : requestedType === "fill_in_blanks"
+                ? FILL_IN_THE_BLANKS_PROMPT
+                : requestedType === "quiz"
+                    ? QUIZ_ARENA_MASTER_PROMPT
+                    : CENTRAL_SYSTEM_PROMPT;
+
+    if (requestedType === "synthesized_notes") {
+        const fullPrompt = `${basePrompt}\n\nTEXTE À ANALYSER :\n${text.substring(0, 30000)}`;
+        const { text: markdown, modelLabel } = await smartGenerate(fullPrompt, false, modelPreference);
+        return {
+            provider: modelLabel,
+            data: { type: "synthesized_notes", items: markdown }
+        };
+    }
+
     const prompt = `
-${CENTRAL_SYSTEM_PROMPT}
+${basePrompt}
 
 TYPE DEMANDÉ : ${requestedType}
 ${userQuery ? `REQUÊTE UTILISATEUR / CONTEXTE : ${userQuery}` : ''}
@@ -487,7 +689,10 @@ ${userQuery ? `REQUÊTE UTILISATEUR / CONTEXTE : ${userQuery}` : ''}
 TEXTE À ANALYSER (UNIQUE SOURCE DE VÉRITÉ) :
 ${text.substring(0, 30000)}
 
-Instructions finales: Génère UNIQUEMENT un objet JSON valide correspondant au type "${requestedType}" demandé. Retourne l'erreur "Pas dans le texte fourni" si le texte ne permet pas de générer le contenu de manière fiable.
+Instructions finales:
+1. Retourne un objet JSON valide : { "type": "${requestedType}", "detectedLanguage": "ISO_CODE", "items": [...] }
+2. CRITICAL: For quiz, generate EXACTLY 4 options per item.
+3. CRITICAL: For fill_in_blanks, generate EXACTLY ONE blank "____" per item.
 `;
 
     const { text: rawJson, modelLabel } = await smartGenerate(prompt, true, modelPreference);
@@ -500,6 +705,23 @@ Instructions finales: Génère UNIQUEMENT un objet JSON valide correspondant au 
             return { error: parsedJson.error, provider: modelLabel };
         }
 
+        // --- DATA VALIDATION LAYER ---
+        if (requestedType === 'quiz' && Array.isArray(parsedJson.items)) {
+            parsedJson.items = parsedJson.items
+                .map((item: any) => validateQuizItem(item))
+                .filter((item: any) => item !== null);
+            
+            if (parsedJson.items.length === 0) throw new Error("Quiz generation failed quality check.");
+        }
+
+        if (requestedType === 'fill_in_blanks' && Array.isArray(parsedJson.items)) {
+            parsedJson.items = parsedJson.items.filter((item: any) => {
+                const blankCount = (item.textWithBlank?.match(/____/g) || []).length;
+                return blankCount === 1;
+            });
+            if (parsedJson.items.length === 0) throw new Error("FITB generation failed: Multiple blanks detected.");
+        }
+
         const validatedData = UnifiedOutputSchema.parse(parsedJson);
 
         return {
@@ -507,7 +729,7 @@ Instructions finales: Génère UNIQUEMENT un objet JSON valide correspondant au 
             data: validatedData
         };
     } catch (err: any) {
-        console.error("Erreur de parsing JSON ou de validation Zod :", err);
-        throw new Error("L'IA n'a pas retourné le format attendu ou un problème de parsing est survenu.");
+        console.error("Analysis Validation Error:", err.message);
+        throw new Error(`Technical Failure: The AI output did not meet Nura's quality constraints (${err.message}).`);
     }
 }

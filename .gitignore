@@ -42,3 +42,7 @@ next-env.d.ts
 
 .vercel
 .env*.local
+.npm-cache/
+lint_report.json
+*.log
+.tmp/
