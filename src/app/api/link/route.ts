@@ -58,14 +58,9 @@ export async function POST(req: Request) {
     let transcript: string | null = null;
     let metadata: any = null;
 
-    // Detect base URL dynamically for internal harvesting (Fix for parse URL error)
-    const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${host}`;
-    
     try {
         console.log(`[NURA] Attempting extraction via Supadata Harvester...`);
-        const harvesterRes = await fetch(`${baseUrl}/api/harvest/youtube`, {
+        const harvesterRes = await fetch(`/api/harvest/youtube`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
