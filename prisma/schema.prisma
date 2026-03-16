@@ -25,6 +25,12 @@ model StudySet {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Study Content Persistence (Fix for Bug 1)
+  rawContent     String?   @db.Text
+  rawContentType String?
+  status         String?   @default("processing")
+  metadata       Json?
+
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   materials   StudyMaterial[]
   artifacts   PedagogicalArtifact[]

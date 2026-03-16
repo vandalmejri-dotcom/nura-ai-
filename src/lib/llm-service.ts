@@ -499,12 +499,30 @@ Core rules:
    - Direct question: Answer clearly + one Socratic follow-up.
    - "Test me": 1-3 targeted recall questions.
 3. TONE: Encouraging, professional, simple language.
+4. FLEXIBILITY: If the user explicitly asks you to do something different — such as "summarize", "explain directly", "stop asking questions", or "just tell me the answer" — you MUST comply immediately and completely. User direct instructions always override your default Socratic behavior.
 
 JSON STRUCTURE:
 {
   "response": "...",
   "nextQuestion": "...",
   "error": "..."
+}`;
+
+const FLASHCARDS_PROMPT = `You are Nura AI's Flashcard Engineering Agent.
+Your goal is to generate high-quality QUESTION/ANSWER pairs for flashcards.
+
+STRICT RULES:
+1. NO FILL-IN-THE-BLANK: Never use "____" or missing words in the question.
+2. FORMAT: Questions must be clear, concise inquiries.
+3. DATA: Base everything exclusively on the provided text.
+4. JSON: Output ONLY valid JSON in the requested structure.
+
+JSON STRUCTURE:
+{
+  "type": "flashcards",
+  "items": [
+    { "front": "The question?", "back": "The answer." }
+  ]
 }`;
 
 export const QUIZ_ARENA_MASTER_PROMPT = `You are Nura AI's ELITE assessment engine.
@@ -583,6 +601,15 @@ Structural Framework (Always follow this exact format):
 
 Execution: Analyze the provided text and immediately output the synthesized notes using the Markdown framework above.`;
 
+const QuestionSchema = z.object({
+    question: z.string().min(10),
+    options: z.array(z.string().min(1)).length(4),
+    correctIndex: z.number().int().min(0).max(3),
+    explanation: z.string().min(5),
+});
+
+const QuizSchema = z.object({ questions: z.array(QuestionSchema) });
+
 // --- REUSABLE VALIDATION HELPERS ---
 export function validateQuizItem(item: any): any | null {
     if (!item || typeof item !== 'object') return null;
@@ -596,11 +623,11 @@ export function validateQuizItem(item: any): any | null {
     if (options.length > 4) options = options.slice(0, 4);
 
     const validOptions = options.map((opt: any, idx: number) => {
-        const text = opt.text || opt.answer || opt.option || "";
+        const text = typeof opt === 'string' ? opt : (opt.text || opt.answer || opt.option || "");
         return {
             id: opt.id || (idx + 1),
             text: text.toString().trim(),
-            isCorrect: !!opt.isCorrect
+            isCorrect: opt.isCorrect !== undefined ? !!opt.isCorrect : (item.correctIndex !== undefined ? idx === item.correctIndex : false)
         };
     });
 
@@ -609,12 +636,11 @@ export function validateQuizItem(item: any): any | null {
 
     // Ensure at least one correct answer
     const hasCorrect = validOptions.some((o: any) => o.isCorrect);
-    let correctAnswerId = item.correctAnswerId;
+    let correctAnswerId = item.correctAnswerId !== undefined ? item.correctAnswerId : item.correctIndex;
     
     if (!hasCorrect) {
-        // Fallback: try to find by ID if provided, or take first
         if (correctAnswerId !== undefined) {
-            const found = validOptions.find((o: any) => o.id === correctAnswerId);
+            const found = validOptions.find((o: any) => o.id === correctAnswerId || (o.id - 1) === correctAnswerId);
             if (found) found.isCorrect = true;
             else (validOptions[0] as any).isCorrect = true;
         } else {
@@ -622,7 +648,7 @@ export function validateQuizItem(item: any): any | null {
         }
     }
 
-    // Re-sync correctAnswerId
+    // Re-sync correct ID
     const finalCorrect = validOptions.find((o: any) => o.isCorrect);
     correctAnswerId = finalCorrect ? finalCorrect.id : validOptions[0].id;
 
@@ -657,9 +683,73 @@ export async function generateTextAnalysis(
     userQuery: string = "",
     useQualityModel: boolean = false
 ): Promise<{ provider: string; data?: any; error?: string }> {
-    let modelPreference = useQualityModel
+    const modelPreference = useQualityModel
         ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
         : ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
+
+    // --- SPECIAL HANDLING FOR QUIZ (STRICT BYPASS) ---
+    if (requestedType === 'quiz') {
+        let attempts = 0;
+        let lastError = "";
+
+        while (attempts < 2) {
+            attempts++;
+            try {
+                const systemPrompt = `You are a quiz generation engine. You output ONLY raw JSON.
+No markdown. No backticks. No explanation. No preamble.
+Your output must be parseable by JSON.parse() with zero modification.`;
+
+                const userPrompt = `Generate exactly 5 multiple-choice questions from the text below.
+  
+STRICT RULES — violating any rule makes the output invalid:
+1. Each question object MUST have exactly these keys:
+   "question" (string), "options" (array), "correctIndex" (number), "explanation" (string)
+2. "options" MUST contain EXACTLY 4 strings. Not 3, not 5. Exactly 4.
+3. "correctIndex" MUST be a number: 0, 1, 2, or 3.
+   It MUST correspond to the index of the correct answer in "options".
+   NEVER leave it as null or omit it.
+4. "explanation" MUST be a non-empty string explaining why the answer is correct.
+5. All 4 options MUST be non-empty strings.
+6. Wrap the entire output in a JSON object: { "questions": [...] }
+  
+TEXT:
+${text.substring(0, 20000)}`;
+
+                const { text: rawJson, modelLabel } = await smartGenerate(systemPrompt + "\n\n" + userPrompt, true, modelPreference);
+                const clean = rawJson.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
+                const parsedJson = JSON.parse(clean);
+
+                const validated = QuizSchema.parse(parsedJson);
+                
+                // Transform to legacy format for frontend compatibility (id/text/isCorrect)
+                const transformedItems = validated.questions.map((q, idx) => ({
+                    id: idx + 1,
+                    questionText: q.question,
+                    options: q.options.map((opt, oIdx) => ({
+                        id: oIdx + 1,
+                        text: opt,
+                        isCorrect: oIdx === q.correctIndex
+                    })),
+                    correctAnswerId: q.correctIndex + 1,
+                    explanation: q.explanation,
+                    bloomLevel: "Deep Analysis",
+                    quizTitle: "Quiz Challenge"
+                }));
+
+                return {
+                    provider: modelLabel,
+                    data: {
+                        type: 'quiz',
+                        items: transformedItems
+                    }
+                };
+            } catch (err: any) {
+                lastError = err.message;
+                console.warn(`[NURA] Quiz Attempt ${attempts} failed:`, err.message);
+            }
+        }
+        throw new Error("Quiz generation failed validation.");
+    }
 
     const basePrompt = requestedType === "tutor_response"
         ? TUTOR_SYSTEM_PROMPT
@@ -667,8 +757,8 @@ export async function generateTextAnalysis(
             ? SYNTHESIZED_NOTES_PROMPT
             : requestedType === "fill_in_blanks"
                 ? FILL_IN_THE_BLANKS_PROMPT
-                : requestedType === "quiz"
-                    ? QUIZ_ARENA_MASTER_PROMPT
+                : requestedType === "flashcards"
+                    ? FLASHCARDS_PROMPT
                     : CENTRAL_SYSTEM_PROMPT;
 
     if (requestedType === "synthesized_notes") {
@@ -691,8 +781,7 @@ ${text.substring(0, 30000)}
 
 Instructions finales:
 1. Retourne un objet JSON valide : { "type": "${requestedType}", "detectedLanguage": "ISO_CODE", "items": [...] }
-2. CRITICAL: For quiz, generate EXACTLY 4 options per item.
-3. CRITICAL: For fill_in_blanks, generate EXACTLY ONE blank "____" per item.
+2. CRITICAL: For fill_in_blanks, generate EXACTLY ONE blank "____" per item.
 `;
 
     const { text: rawJson, modelLabel } = await smartGenerate(prompt, true, modelPreference);
@@ -705,15 +794,7 @@ Instructions finales:
             return { error: parsedJson.error, provider: modelLabel };
         }
 
-        // --- DATA VALIDATION LAYER ---
-        if (requestedType === 'quiz' && Array.isArray(parsedJson.items)) {
-            parsedJson.items = parsedJson.items
-                .map((item: any) => validateQuizItem(item))
-                .filter((item: any) => item !== null);
-            
-            if (parsedJson.items.length === 0) throw new Error("Quiz generation failed quality check.");
-        }
-
+        // --- DATA VALIDATION LAYER (Generic) ---
         if (requestedType === 'fill_in_blanks' && Array.isArray(parsedJson.items)) {
             parsedJson.items = parsedJson.items.filter((item: any) => {
                 const blankCount = (item.textWithBlank?.match(/____/g) || []).length;

@@ -84,7 +84,10 @@ export default function FlashcardMasteryLoop({ cards: initialCards, setId, langu
             ...c,
             id: c.id || `card_${i}`,
             mastery: c.mastery || 0
-        }))
+        })).filter(card => {
+            const text = (card.front || card.question || "").toLowerCase();
+            return !text.includes("____") && !text.includes("fill in");
+        })
     );
 
     const [isFlipped, setIsFlipped] = useState(false);
@@ -297,6 +300,13 @@ export default function FlashcardMasteryLoop({ cards: initialCards, setId, langu
                 </div>
             );
         }
+    }
+
+    if (!initialCards || initialCards.length === 0) {
+        return <div className="text-zinc-500 font-bold italic py-20 flex flex-col items-center gap-4">
+            <Sparkle size={48} weight="thin" className="animate-pulse" />
+            Loading flashcards...
+        </div>;
     }
 
     const currentCardIdx = workingQueue[currentIndexInQueue];

@@ -151,7 +151,7 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                         placeholder="INPUT NEURAL COMMAND..."
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-[28px] py-5 pl-14 pr-20 text-sm font-bold tracking-widest text-white outline-none focus:border-fuchsia-500/50 transition-all focus:bg-white/[0.05] shadow-inner placeholder:text-zinc-700 uppercase"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-[28px] py-5 pl-14 pr-20 text-sm font-bold tracking-widest text-white outline-none focus:border-fuchsia-500/50 transition-all focus:bg-white/[0.05] shadow-inner placeholder:text-zinc-700"
                     />
                     <button
                         disabled={!input.trim() || isLoading}

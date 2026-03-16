@@ -280,7 +280,7 @@ export default function QuizArena({ quiz: initialQuiz, set }: QuizArenaProps) {
                         Mastery Protocol: Active
                     </div>
                     <h2 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-gradient leading-none">
-                        {currentQ.quizTitle || currentQ.title || "Concept Synthesis"}
+                        {currentQ.quizTitle || currentQ.title || "Concept Challenge"}
                     </h2>
                 </div>
 

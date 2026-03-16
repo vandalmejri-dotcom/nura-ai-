@@ -113,8 +113,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             progressInterval = setInterval(() => {
                 setProgress(prev => {
                     if (prev >= 95) return prev;
-                    return prev + (prev < 80 ? 1 : 0.2);
+                    const increment = prev < 80 ? 1 : 0.2;
+                    return Math.min(95, prev + increment);
                 });
+
             }, 400);
 
             if (selectedFile) {
@@ -150,23 +152,28 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
             if (!fetchRes.ok) {
                 let errorDetails = "Server Error";
+                const status = fetchRes.status;
                 const responseText = await fetchRes.text().catch(() => "");
+                
                 try {
                     const data = JSON.parse(responseText);
-                    const errStr = data.error || data.message || "";
-                    
-                    if (errStr.includes('NURA_BLOCKADE') || errStr.includes('YouTube') || errStr.includes('blocking')) {
-                        errorDetails = "YouTube is aggressively blocking the automated harvester. 💡 PRO TIP: Go back, select 'Raw Text', and paste the transcript there for instant results!";
-                    } else if (errStr.includes('NO_SUBTITLES')) {
-                        errorDetails = "Mission Failed: No subtitles available for this video or access is blocked.";
-                    } else {
-                        errorDetails = errStr || errorDetails;
-                    }
+                    errorDetails = data.error || data.message || errorDetails;
                 } catch (e) {
-                    errorDetails = responseText.length > 0 && responseText.length < 200 ? responseText : "Nura Engine returned an invalid response. Access may be blocked.";
+                    errorDetails = responseText.length > 0 && responseText.length < 200 ? responseText : "Nura Engine returned an invalid response.";
                 }
+
+                // Precision Error Mapping - Defeating "Generic Error Fatigue"
+                if (status === 429) {
+                    errorDetails = "YouTube rate limit hit — please wait 60 seconds and retry.";
+                } else if (status === 403) {
+                    errorDetails = "This video is private and cannot be analyzed.";
+                } else if (status === 500 && errorDetails.toLowerCase().includes('extraction failed')) {
+                    errorDetails = "YouTube is aggressively blocking the automated harvester. 💡 PRO TIP: Go back, select 'Raw Text', and paste the transcript there for instant results!";
+                }
+                
                 throw new Error(errorDetails);
             }
+
 
             // Halt interval once we have a response stream or JSON
             if (progressInterval) clearInterval(progressInterval);
@@ -431,12 +438,14 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-linear-to-r from-fuchsia-600 to-violet-600 transition-all duration-300"
-                                        style={{ width: `${progress}%` }}
+                                        style={{ width: `${Math.round(progress)}%` }}
                                     />
+
                                 </div>
                                 <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                                     <span>Processing: {selectedFile?.name || 'Content'}</span>
-                                    <span>{progress}%</span>
+                                    <span>{Math.round(progress)}%</span>
+
                                 </div>
                             </div>
 
