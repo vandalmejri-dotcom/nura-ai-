@@ -59,7 +59,10 @@ export async function POST(req: Request) {
     let metadata: any = null;
 
     // Use internal or external harvester URL
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+    let baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+    if (baseUrl && !baseUrl.startsWith('http')) {
+        baseUrl = `https://${baseUrl}`;
+    }
     
     try {
         console.log(`[NURA] Attempting extraction via Supadata Harvester...`);
