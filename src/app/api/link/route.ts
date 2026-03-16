@@ -59,31 +59,30 @@ export async function POST(req: Request) {
     let metadata: any = null;
 
     try {
-        console.log(`[NURA] Attempting extraction via Supadata Harvester...`);
+        console.log(`[NURA] Attempting direct extraction via Supadata...`);
         
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
-          ?? (typeof window !== 'undefined' 
-              ? window.location.origin 
-              : 'http://localhost:3000');
-
-        const harvesterRes = await fetch(`${baseUrl}/api/harvest/youtube`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
-        });
-
-        if (harvesterRes.ok) {
-            const hData = await harvesterRes.json();
-            if (hData.success) {
-                transcript = hData.data.transcript;
-                metadata = hData.data.metadata;
-                console.log(`[NURA] Supadata Harvester Success!`);
-            } else {
-              throw new Error(hData.error || "Harvester returned unsuccessful status.");
+        const supadataRes = await fetch(
+            `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`,
+            {
+                method: 'GET',
+                headers: { 'x-api-key': process.env.SUPADATA_API_KEY! },
+                signal: AbortSignal.timeout(20000),
             }
+        );
+
+        if (supadataRes.ok) {
+            const sData = await supadataRes.json();
+            transcript = sData.content || sData.transcript || '';
+            metadata = {
+                title: sData.title || 'YouTube Video',
+                channel: sData.channel || 'YouTube',
+                duration: sData.duration || 0,
+                thumbnail: sData.thumbnail || null
+            };
+            console.log(`[NURA] Direct Supadata Success!`);
         } else {
-            const errData = await harvesterRes.json().catch(() => ({}));
-            throw new Error(errData.error || `Harvester HTTP error: ${harvesterRes.status}`);
+            const errData = await supadataRes.json().catch(() => ({}));
+            throw new Error(errData.error || `Supadata API error: ${supadataRes.status}`);
         }
     } catch (e: any) {
         console.error(`[NURA] YouTube Extraction Failed:`, e.message);
