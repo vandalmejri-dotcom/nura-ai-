@@ -60,11 +60,16 @@ export async function POST(req: Request) {
 
     try {
         console.log(`[NURA] Attempting extraction via Supadata Harvester...`);
-        const harvesterRes = await fetch(`/api/harvest/youtube`, {
+        
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ?? (typeof window !== 'undefined' 
+              ? window.location.origin 
+              : 'http://localhost:3000');
+
+        const harvesterRes = await fetch(`${baseUrl}/api/harvest/youtube`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
-            // Local dev might need a shorter timeout or just rely on default
         });
 
         if (harvesterRes.ok) {
