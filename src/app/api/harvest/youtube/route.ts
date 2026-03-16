@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
+export const maxDuration = 10;
 
 function extractVideoId(url: string): string | null {
   const match = url.match(
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       headers: {
         'x-api-key': apiKey,
       },
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
