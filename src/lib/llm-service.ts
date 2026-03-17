@@ -188,6 +188,7 @@ async function callGemini(model: Model, prompt: string, jsonMode: boolean): Prom
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(8000), // 8s timeout to keep within Vercel's 10s limit
     });
 
     if (!res.ok) {
@@ -248,6 +249,7 @@ async function callGroq(model: Model, prompt: string, jsonMode: boolean): Promis
             'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(8000), // 8s timeout
     });
 
     if (!res.ok) {
@@ -271,21 +273,13 @@ async function callGroq(model: Model, prompt: string, jsonMode: boolean): Promis
 export async function smartGenerate(prompt: string, jsonMode: boolean, preferenceList: string[]) {
     const errors: string[] = [];
 
-    while (true) {
+    let attempts = 0;
+    while (attempts < 2) { // Maximum 2 attempts total to avoid 10s Vercel timeout
+        attempts++;
         const model = quota.pickModel(preferenceList);
 
         if (!model) {
-            const waits = MODELS.map(m => ({
-                label: m.label,
-                secs: quota.secondsUntilAvailable(m),
-                rpd: m.rpd,
-                dailyRemaining: Math.max(0, m.rpd - (quota as any).usage[m.id].dailyCount),
-            }));
-            const soonest = waits.filter(w => w.dailyRemaining > 0).sort((a, b) => a.secs - b.secs)[0];
-            if (soonest && soonest.secs <= 15) {
-                await new Promise(r => setTimeout(r, soonest.secs * 1000 + 500));
-                continue;
-            }
+            console.warn('[smartGenerate] No models available or all rate-limited.');
             break;
         }
 
@@ -297,7 +291,12 @@ export async function smartGenerate(prompt: string, jsonMode: boolean, preferenc
             console.log(`[smartGenerate] Model: ${model.label}, Response (start): ${text.substring(0, 200)}...`);
             return { text, modelLabel: model.label };
         } catch (err: any) {
-            errors.push(err.message);
+            console.error(`[smartGenerate] Attempt ${attempts} failed (${model.label}):`, err.message);
+            errors.push(`${model.label}: ${err.message}`);
+            // If it's a timeout or quota, don't try too many more models
+            if (err.name === 'TimeoutError' || err.message.includes('429')) {
+                // Continue to next attempt
+            }
         }
     }
 
