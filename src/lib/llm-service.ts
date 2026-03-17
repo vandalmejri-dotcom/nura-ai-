@@ -294,6 +294,7 @@ export async function smartGenerate(prompt: string, jsonMode: boolean, preferenc
                 ? await callGroq(model, prompt, jsonMode)
                 : await callGemini(model, prompt, jsonMode);
             quota.recordSuccess(model.id);
+            console.log(`[smartGenerate] Model: ${model.label}, Response (start): ${text.substring(0, 200)}...`);
             return { text, modelLabel: model.label };
         } catch (err: any) {
             errors.push(err.message);

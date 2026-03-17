@@ -49,12 +49,20 @@ export async function POST(req: Request) {
             false
         );
 
+        if (result.error) {
+            console.error('[Flashcards] AI Service Error:', result.error);
+            return NextResponse.json({ error: result.error }, { status: 500 });
+        }
+
         // result.data is already parsed by llm-service.ts
         const data = result.data || {};
-        const items = data.items || data.flashcards || data.cards || (Array.isArray(data) ? data : []);
+        const items = Array.isArray(data) ? data : (data.items || data.flashcards || data.cards || []);
 
         console.log('[Flashcards] Raw content length:', text?.length);
         console.log('[Flashcards] Items count from LLM:', items.length);
+        if (items.length === 0) {
+            console.warn('[Flashcards] Empty items returned. Full response:', JSON.stringify(data));
+        }
 
         // Filter valid cards
         let finalCards = items

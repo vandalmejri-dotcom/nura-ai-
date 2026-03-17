@@ -97,6 +97,7 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         setIsGenerating(true);
         setGenError(null);
 
+        console.log(`[FlashcardMasteryLoop] Triggering generation for setId: ${set.id}`);
         try {
             const res = await fetch('/api/generate/flashcards', {
                 method: 'POST',
@@ -104,7 +105,10 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
                 body: JSON.stringify({ setId: set.id, language })
             });
 
-            if (!res.ok) throw new Error("Flashcard generation failed.");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || "Flashcard generation failed.");
+            }
             const result = await res.json();
 
             if (result.success && result.data) {
