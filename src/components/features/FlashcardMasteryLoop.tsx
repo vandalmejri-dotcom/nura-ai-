@@ -92,6 +92,16 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         });
     });
 
+    useEffect(() => {
+        if (set.flashcards && set.flashcards.length > 0 && cardStates.length === 0) {
+            setCardStates(set.flashcards.map((c: any, i: number) => ({
+                ...c,
+                id: c.id || `card_${i}`,
+                mastery: c.mastery || 0
+            })));
+        }
+    }, [set.flashcards]);
+
     const handleGenerate = useCallback(async () => {
         if (isGenerating) return;
         setIsGenerating(true);
