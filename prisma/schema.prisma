@@ -32,10 +32,14 @@ model StudySet {
   metadata       Json?
   
   // AI Modules (JSON Storage)
-  flashcards     Json?
-  quiz           Json?
+  flashcards      Json?
+  quiz            Json?
   fillInTheBlanks Json?
-  stats          Json?
+  synthesizedNotes String?   @db.Text
+  podcast          String?   @db.Text
+  tutorLesson      String?   @db.Text
+  writtenTests     String?   @db.Text
+  stats           Json?
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   materials   StudyMaterial[]
