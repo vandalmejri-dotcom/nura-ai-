@@ -159,8 +159,10 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         }, { Unfamiliar: 0, Learning: 0, Familiar: 0, Mastered: 0 });
     }, [cardStates]);
 
-    // Initial Queue Load
+    // Initialize or re-sync working queue when cards are loaded/updated
     useEffect(() => {
+        if (cardStates.length === 0) return;
+
         const unmastered = cardStates
             .map((c, i) => (c.mastery! < 3 ? i : -1))
             .filter(i => i !== -1);
@@ -168,10 +170,11 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         if (unmastered.length > 0) {
             setWorkingQueue(unmastered);
             setCurrentIndexInQueue(0);
-        } else {
+            setShowTermination(false);
+        } else if (cardStates.length > 0) {
             setShowTermination(true);
         }
-    }, []);
+    }, [cardStates]);
 
     const startNewRound = useCallback(() => {
         const unmastered = cardStates
@@ -258,7 +261,7 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
     }, [handleFlip, handleMasteryUpdate, handlePrev, handleNext, showTermination]);
 
     // Scenario Screens
-    if (showTermination) {
+    if (showTermination && cardStates.length > 0) {
         const isFullyMastered = counts.Mastered === cardStates.length;
 
         if (isFullyMastered) {
@@ -367,7 +370,14 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         );
     }
 
-    if (cardStates.length === 0) return null;
+    if (cardStates.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
+                <p className="text-zinc-500 font-bold italic">No flashcards found.</p>
+                <button onClick={handleGenerate} className="bg-fuchsia-600 text-white px-6 py-2 rounded-xl">Generate Now</button>
+            </div>
+        );
+    }
 
     const currentCardIdx = workingQueue[currentIndexInQueue];
     const currentCard = cardStates[currentCardIdx];

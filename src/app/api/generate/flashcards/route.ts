@@ -49,8 +49,47 @@ export async function POST(req: Request) {
             false // Use faster model for cards to meet 10s limit
         );
 
-        const flashcards = result.data?.flashcards || result.data?.items || [];
-        const finalCards = flashcards.slice(0, 10);
+        const rawResponse = JSON.stringify(result.data); // result.data is already an object from llm-service
+        console.log('[Flashcards] rawContent length:', text?.length);
+        console.log('[Flashcards] LLM raw response:', rawResponse);
+
+        let parsedCards = [];
+        try {
+            // Strip markdown code fences if present
+            const cleaned = rawResponse
+                .replace(/```json\n?/g, '')
+                .replace(/```\n?/g, '')
+                .trim();
+            
+            const parsed = JSON.parse(cleaned);
+            
+            // Handle both { flashcards: [...] } and direct array
+            parsedCards = Array.isArray(parsed) 
+                ? parsed 
+                : (parsed.flashcards ?? parsed.items ?? parsed.cards ?? []);
+            
+            // Filter out any invalid cards
+            parsedCards = parsedCards.filter(
+                (card: any) => card && card.front && card.back && 
+                        typeof card.front === 'string' && 
+                        typeof card.back === 'string' &&
+                        !card.front.includes('___')
+            );
+            
+            console.log('[Flashcards] Valid cards after filter:', parsedCards.length);
+        } catch (e) {
+            console.error('[Flashcards] JSON parse failed:', e);
+            console.error('[Flashcards] Raw response was:', rawResponse);
+        }
+
+        if (parsedCards.length === 0) {
+            return NextResponse.json(
+                { error: 'Failed to generate valid flashcards. Please try again.' },
+                { status: 500 }
+            );
+        }
+
+        const finalCards = parsedCards.slice(0, 10);
 
         // Save to DB
         await prisma.studySet.update({
