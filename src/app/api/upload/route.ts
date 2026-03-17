@@ -1,6 +1,5 @@
 // src/app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { generateStudySet } from '@/lib/llm-service';
 import { parsePDF, parseDOCX } from '@/lib/ingestion';
 
 export const dynamic = 'force-dynamic';
@@ -45,20 +44,29 @@ export async function POST(req: NextRequest) {
                         throw new Error("Extracted text is too short or empty.");
                     }
 
-                    const studySetData = await generateStudySet(fileName, cleanText, options, language);
+                    // --- NEW: LAZY GENERATION ARCHITECTURE ---
+                    const words = cleanText.split(/\s+/).filter(w => w.length > 4);
                     
                     const finalData: any = {
-                        ...studySetData,
-                        id: studySetData.id || 'set_' + Date.now(),
+                        id: 'set_' + Date.now(),
+                        title: fileName.replace(/\.[^/.]+$/, ''),
                         sourceName: fileName,
+                        generatedBy: 'Nura AI (Lazy)',
                         sourceContent: cleanText,
                         sourceUrl: blobUrl,
                         rawContent: cleanText,
                         rawContentType: 'file',
-                        status: 'ready'
+                        status: 'ready',
+                        stats: {
+                            wordCount: words.length,
+                            characterCount: cleanText.length,
+                            cardCount: 0,
+                            quizCount: 0,
+                            fibCount: 0,
+                        }
                     };
 
-                    // Persistence (Fix for Bug 1)
+                    // Persistence
                     try {
                         const { prisma } = await import('@/lib/prisma');
                         const user = await prisma.user.upsert({
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
                 })();
 
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("TIMEOUT")), 15000)
+                    setTimeout(() => reject(new Error("TIMEOUT")), 9000) // Shorter timeout for Vercel
                 );
 
                 await Promise.race([processingTask, timeoutPromise]);

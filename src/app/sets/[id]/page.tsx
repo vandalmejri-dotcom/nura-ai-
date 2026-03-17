@@ -31,10 +31,11 @@ type Tab = 'notes' | 'synthesis' | 'flashcards' | 'quiz' | 'podcast' | 'tutor' |
 export default function StudySetDetail() {
     const { id } = useParams();
     const router = useRouter();
-    const { sets, deleteSet, loading } = useStudySets();
+    const { sets, updateSet, deleteSet, loading } = useStudySets();
     const [set, setSet] = useState<StudySet | null>(null);
     const [activeTab, setActiveTab] = useState<Tab>('synthesis');
     const [mounted, setMounted] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -45,25 +46,70 @@ export default function StudySetDetail() {
     }, [id, sets, loading]);
 
     const tabs = React.useMemo(() => [
-        { id: 'synthesis', label: 'AI Synthesis', icon: Sparkle, disabled: !set?.synthesizedNotes },
+        { id: 'synthesis', label: 'AI Synthesis', icon: Sparkle, disabled: false },
         { id: 'notes', label: 'Raw Input', icon: FileText, disabled: false },
-        { id: 'flashcards', label: 'Flashcards', icon: Cards, disabled: !set?.flashcards || set?.flashcards.length === 0 },
-        { id: 'quiz', label: 'Quiz Arena', icon: Exam, disabled: !set?.quiz || set?.quiz.length === 0 },
-        { id: 'fillInTheBlanks', label: 'Fill in the Blanks', icon: FileText, disabled: !set?.fillInTheBlanks || set?.fillInTheBlanks.length === 0 },
-        { id: 'podcast', label: 'Podcast', icon: SpeakerHigh, disabled: !set?.podcast },
-        { id: 'tutor', label: 'AI Tutor', icon: ChatTeardropDots, disabled: !set?.tutorLesson },
+        { id: 'flashcards', label: 'Flashcards', icon: Cards, disabled: false },
+        { id: 'quiz', label: 'Quiz Arena', icon: Exam, disabled: false },
+        { id: 'fillInTheBlanks', label: 'Fill in the Blanks', icon: FileText, disabled: false },
+        { id: 'podcast', label: 'Podcast', icon: SpeakerHigh, disabled: false },
+        { id: 'tutor', label: 'AI Tutor', icon: ChatTeardropDots, disabled: false },
     ], [set, activeTab]);
 
     // Select the first enabled tab if the current one is disabled or not set
     useEffect(() => {
         if (set) {
             const currentTab = tabs.find(t => t.id === activeTab);
-            if (!currentTab || currentTab.disabled) {
-                const firstAvailable = tabs.find(t => !t.disabled);
-                if (firstAvailable) setActiveTab(firstAvailable.id as Tab);
+            if (!currentTab) {
+                setActiveTab('synthesis');
             }
         }
     }, [set, tabs, activeTab]);
+
+    const handleGenerate = async (type: Tab) => {
+        if (!set || !set.rawContent || isGenerating) return;
+        
+        setIsGenerating(true);
+        try {
+            const endpoint = 
+                type === 'flashcards' ? '/api/generate/flashcards' :
+                type === 'quiz' ? '/api/generate/quiz' :
+                type === 'synthesis' ? '/api/generate/synthesis' :
+                type === 'fillInTheBlanks' ? '/api/generate/fib' :
+                null;
+            
+            if (!endpoint) return;
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: set.rawContent, language: set.detectedLanguage || 'en' })
+            });
+
+            if (!res.ok) throw new Error("Generation failed");
+            
+            const result = await res.json();
+            if (result.success) {
+                const updates: Partial<StudySet> = {};
+                if (type === 'flashcards') updates.flashcards = result.data;
+                if (type === 'quiz') updates.quiz = result.data;
+                if (type === 'synthesis') updates.synthesizedNotes = result.data;
+                if (type === 'fillInTheBlanks') updates.fillInTheBlanks = result.data;
+
+                // Update stats
+                const newStats = { ...(set.stats || { wordCount: 0, characterCount: 0, cardCount: 0, quizCount: 0, fibCount: 0 }) };
+                if (type === 'flashcards') newStats.cardCount = result.data.length;
+                if (type === 'quiz') newStats.quizCount = result.data.length;
+                if (type === 'fillInTheBlanks') newStats.fibCount = result.data.length;
+                updates.stats = newStats;
+
+                updateSet(set.id, updates);
+            }
+        } catch (error) {
+            console.error("Lazy Generation Error:", error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     if (!mounted || loading) return <div className="animate-pulse glass-dark h-screen rounded-3xl" />;
     if (!set) return (
@@ -137,13 +183,9 @@ export default function StudySetDetail() {
 
                 {activeTab === 'synthesis' && (
                     <div className="prose prose-invert max-w-none space-y-8 animate-slide-up">
-                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/10 w-fit">
                             <div className="text-sm font-bold text-violet-500">{set.stats?.quizCount || 0}</div>
                             <div className="text-[10px] font-bold text-violet-500/60 uppercase tracking-widest">Questions</div>
-                        </div>
-                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                            <div className="text-sm font-bold text-emerald-500">{set.stats?.fibCount || 0}</div>
-                            <div className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest">Cloze Tests</div>
                         </div>
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400">
@@ -160,10 +202,13 @@ export default function StudySetDetail() {
                                     </ReactMarkdown>
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
-                                    <Sparkle size={48} weight="thin" className="animate-pulse" />
-                                    <p className="font-bold italic text-zinc-500">Synthesizing intelligence... (Initial generation takes 5-10s)</p>
-                                </div>
+                                <LazyPlaceholder 
+                                    type="synthesis" 
+                                    isGenerating={isGenerating} 
+                                    onGenerate={() => handleGenerate('synthesis')} 
+                                    icon={<Sparkle size={48} weight="thin" />}
+                                    label="AI Synthesis"
+                                />
                             )}
                         </div>
                     </div>
@@ -180,23 +225,43 @@ export default function StudySetDetail() {
                 )}
 
                 {activeTab === 'flashcards' && (
-                    <div className="flex flex-col items-center justify-center py-10">
-                        <FlashcardMasteryLoop
-                            cards={set.flashcards || []}
-                            setId={set.id}
-                            language={set.detectedLanguage || 'en'}
-                        />
+                    <div className="flex flex-col items-center justify-center py-10 w-full">
+                        {set.flashcards && set.flashcards.length > 0 ? (
+                            <FlashcardMasteryLoop
+                                cards={set.flashcards || []}
+                                setId={set.id}
+                                language={set.detectedLanguage || 'en'}
+                            />
+                        ) : (
+                            <LazyPlaceholder 
+                                type="flashcards" 
+                                isGenerating={isGenerating} 
+                                onGenerate={() => handleGenerate('flashcards')} 
+                                icon={<Cards size={48} weight="thin" />}
+                                label="Flashcards"
+                            />
+                        )}
                     </div>
                 )}
 
                 {activeTab === 'quiz' && (
-                    <div className="h-full animate-slide-up">
-                        <QuizArena quiz={set.quiz || []} set={set} />
+                    <div className="h-full animate-slide-up w-full flex flex-col items-center justify-center">
+                        {set.quiz && set.quiz.length > 0 ? (
+                            <QuizArena quiz={set.quiz || []} set={set} />
+                        ) : (
+                            <LazyPlaceholder 
+                                type="quiz" 
+                                isGenerating={isGenerating} 
+                                onGenerate={() => handleGenerate('quiz')} 
+                                icon={<Exam size={48} weight="thin" />}
+                                label="Quiz Arena"
+                            />
+                        )}
                     </div>
                 )}
 
                 {activeTab === 'fillInTheBlanks' as Tab && (
-                    <div className="h-full animate-slide-up">
+                    <div className="h-full animate-slide-up w-full flex flex-col items-center justify-center">
                         {set.fillInTheBlanks && set.fillInTheBlanks.length > 0 ? (
                             <FillInTheBlanks
                                 questions={set.fillInTheBlanks || []}
@@ -204,13 +269,13 @@ export default function StudySetDetail() {
                                 language={set.detectedLanguage || 'en'}
                             />
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
-                                <Warning size={48} weight="thin" className="animate-pulse" />
-                                <div className="text-center">
-                                    <p className="font-bold italic text-zinc-500">No Fill in the Blanks exercises available.</p>
-                                    <p className="text-sm opacity-50">Launch a new mission with 'Fill in the Blanks' option enabled.</p>
-                                </div>
-                            </div>
+                            <LazyPlaceholder 
+                                type="fillInTheBlanks" 
+                                isGenerating={isGenerating} 
+                                onGenerate={() => handleGenerate('fillInTheBlanks')} 
+                                icon={<FileText size={48} weight="thin" />}
+                                label="Fill in the Blanks"
+                            />
                         )}
                     </div>
                 )}
@@ -242,6 +307,34 @@ export default function StudySetDetail() {
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function LazyPlaceholder({ type, isGenerating, onGenerate, icon, label }: any) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-6">
+            <div className={`${isGenerating ? 'animate-spin' : ''}`}>
+                {icon}
+            </div>
+            <div className="text-center space-y-2">
+                <p className="font-bold italic text-zinc-500">
+                    {isGenerating ? `Generating ${label}...` : `${label} not yet generated.`}
+                </p>
+                <p className="text-sm opacity-50 max-w-xs mx-auto">
+                    {isGenerating 
+                        ? "Nura AI is extracting concepts and building your mission materials." 
+                        : `Launch the generation to create high-performance ${label.toLowerCase()} from your materials.`}
+                </p>
+            </div>
+            {!isGenerating && (
+                <button 
+                    onClick={onGenerate}
+                    className="flex items-center gap-2 bg-fuchsia-600 text-white px-8 py-3 rounded-2xl font-bold text-sm shadow-xl hover:bg-fuchsia-500 transition-all active:scale-95"
+                >
+                    <Sparkle size={18} weight="bold" /> Generate {label}
+                </button>
+            )}
         </div>
     );
 }

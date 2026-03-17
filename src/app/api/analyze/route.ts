@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { generateTextAnalysis } from '@/lib/llm-service';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 10;
+
 export async function POST(req: Request) {
     try {
         const { text } = await req.json();

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { smartGenerate, QUIZ_ARENA_ENGINE_PROMPT, validateQuizItem } from '@/lib/llm-service';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 10;
 
 export async function POST(req: NextRequest) {
     try {

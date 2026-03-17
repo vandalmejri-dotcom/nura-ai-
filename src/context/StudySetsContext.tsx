@@ -39,6 +39,7 @@ interface StudySetsContextType {
     sets: StudySet[];
     loading: boolean;
     addSet: (set: StudySet) => void;
+    updateSet: (id: string, updates: Partial<StudySet>) => void;
     deleteSet: (id: string) => void;
     syncMastery: (setId: string, conceptId: string, feedback: 'forgot' | 'hard' | 'good' | 'easy' | 'correct' | 'wrong') => void;
 }
@@ -68,6 +69,11 @@ export function StudySetsProvider({ children }: { children: React.ReactNode }) {
 
     const addSet = (set: StudySet) => {
         const updated = [set, ...sets];
+        saveSets(updated);
+    };
+
+    const updateSet = (id: string, updates: Partial<StudySet>) => {
+        const updated = sets.map(s => s.id === id ? { ...s, ...updates } : s);
         saveSets(updated);
     };
 
@@ -136,7 +142,7 @@ export function StudySetsProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <StudySetsContext.Provider value={{ sets, loading, addSet, deleteSet, syncMastery }}>
+        <StudySetsContext.Provider value={{ sets, loading, addSet, updateSet, deleteSet, syncMastery }}>
             {children}
         </StudySetsContext.Provider>
     );
