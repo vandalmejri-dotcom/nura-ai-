@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "@prisma/client": "^5.10.2",
+    "@prisma/client": "^5.22.0",
     "@vercel/blob": "^2.3.1",
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
@@ -40,7 +40,7 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.4.35",
-    "prisma": "^5.10.2",
+    "prisma": "^5.22.0",
     "tailwindcss": "4.2.1",
     "typescript": "^5.3.3"
   }

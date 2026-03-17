@@ -107,7 +107,10 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || "Flashcard generation failed.");
+                if (res.status === 504 || errorData.code === 'FUNCTION_INVOCATION_TIMEOUT') {
+                    throw new Error("The AI brain timed out. This video transcript might be too long for the free tier. Try a shorter one.");
+                }
+                throw new Error(errorData.error || "Flashcard generation failure.");
             }
             const result = await res.json();
 

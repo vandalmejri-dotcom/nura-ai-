@@ -752,6 +752,10 @@ ${text.substring(0, 20000)}`;
         throw new Error("Quiz generation failed validation.");
     }
 
+    const textSlice = (requestedType === "flashcards" || requestedType === "fill_in_blanks")
+        ? text.substring(0, 15000)
+        : text.substring(0, 30000);
+
     const basePrompt = requestedType === "tutor_response"
         ? TUTOR_SYSTEM_PROMPT
         : requestedType === "synthesized_notes"
@@ -763,7 +767,7 @@ ${text.substring(0, 20000)}`;
                     : CENTRAL_SYSTEM_PROMPT;
 
     if (requestedType === "synthesized_notes") {
-        const fullPrompt = `${basePrompt}\n\nTEXTE À ANALYSER :\n${text.substring(0, 30000)}`;
+        const fullPrompt = `${basePrompt}\n\nTEXTE À ANALYSER :\n${textSlice}`;
         const { text: markdown, modelLabel } = await smartGenerate(fullPrompt, false, modelPreference);
         return {
             provider: modelLabel,
@@ -778,7 +782,7 @@ TYPE DEMANDÉ : ${requestedType}
 ${userQuery ? `REQUÊTE UTILISATEUR / CONTEXTE : ${userQuery}` : ''}
 
 TEXTE À ANALYSER (UNIQUE SOURCE DE VÉRITÉ) :
-${text.substring(0, 30000)}
+${textSlice}
 
 Instructions finales:
 1. Retourne un objet JSON valide : { "type": "${requestedType}", "detectedLanguage": "ISO_CODE", "items": [...] }
