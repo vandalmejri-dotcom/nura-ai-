@@ -226,21 +226,10 @@ export default function StudySetDetail() {
 
                 {activeTab === 'flashcards' && (
                     <div className="flex flex-col items-center justify-center py-10 w-full">
-                        {set.flashcards && set.flashcards.length > 0 ? (
-                            <FlashcardMasteryLoop
-                                cards={set.flashcards || []}
-                                setId={set.id}
-                                language={set.detectedLanguage || 'en'}
-                            />
-                        ) : (
-                            <LazyPlaceholder 
-                                type="flashcards" 
-                                isGenerating={isGenerating} 
-                                onGenerate={() => handleGenerate('flashcards')} 
-                                icon={<Cards size={48} weight="thin" />}
-                                label="Flashcards"
-                            />
-                        )}
+                        <FlashcardMasteryLoop
+                            set={set}
+                            language={set.detectedLanguage || 'en'}
+                        />
                     </div>
                 )}
 

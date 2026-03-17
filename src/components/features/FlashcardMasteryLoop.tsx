@@ -24,8 +24,7 @@ interface Card {
 }
 
 interface FlashcardMasteryLoopProps {
-    cards: any[];
-    setId: string;
+    set: any;
     language?: string | null;
 }
 
@@ -74,21 +73,69 @@ const DICTIONARY: Record<string, any> = {
     }
 };
 
-export default function FlashcardMasteryLoop({ cards: initialCards, setId, language = 'en' }: FlashcardMasteryLoopProps) {
+export default function FlashcardMasteryLoop({ set, language = 'en' }: FlashcardMasteryLoopProps) {
     // 1. ALL HOOKS AT THE TOP
-    // 1. ALL HOOKS AT THE TOP
-    const { syncMastery } = useStudySets();
+    const { syncMastery, updateSet } = useStudySets();
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [genError, setGenError] = useState<string | null>(null);
 
-    const [cardStates, setCardStates] = useState<Card[]>(() =>
-        initialCards.map((c, i) => ({
+    const [cardStates, setCardStates] = useState<Card[]>(() => {
+        const initialCards = set.flashcards || [];
+        if (initialCards.length === 0) return [];
+        return initialCards.map((c: any, i: number) => ({
             ...c,
             id: c.id || `card_${i}`,
             mastery: c.mastery || 0
-        })).filter(card => {
+        })).filter((card: any) => {
             const text = (card.front || card.question || "").toLowerCase();
             return !text.includes("____") && !text.includes("fill in");
-        })
-    );
+        });
+    });
+
+    const handleGenerate = useCallback(async () => {
+        if (isGenerating) return;
+        setIsGenerating(true);
+        setGenError(null);
+
+        try {
+            const res = await fetch('/api/generate/flashcards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setId: set.id, language })
+            });
+
+            if (!res.ok) throw new Error("Flashcard generation failed.");
+            const result = await res.json();
+
+            if (result.success && result.data) {
+                const newCards = result.data.map((c: any, i: number) => ({
+                    ...c,
+                    id: `card_${Date.now()}_${i}`,
+                    mastery: 0
+                }));
+                setCardStates(newCards);
+                
+                updateSet(set.id, { 
+                    flashcards: newCards,
+                    stats: {
+                        ...(set.stats || {}),
+                        cardCount: newCards.length 
+                    }
+                });
+            }
+        } catch (err: any) {
+            setGenError(err.message);
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [set.id, set.stats, language, isGenerating, updateSet]);
+
+    // Auto-trigger if empty
+    useEffect(() => {
+        if (cardStates.length === 0 && !isGenerating && !genError) {
+            handleGenerate();
+        }
+    }, [cardStates.length, isGenerating, genError, handleGenerate]);
 
     const [isFlipped, setIsFlipped] = useState(false);
     const [workingQueue, setWorkingQueue] = useState<number[]>([]);
@@ -165,7 +212,7 @@ export default function FlashcardMasteryLoop({ cards: initialCards, setId, langu
         });
 
         setLastAction(knew ? 'knew' : 'forgot');
-        syncMastery(setId, cardId, feedback);
+        syncMastery(set.id, cardId, feedback);
 
         setTimeout(() => {
             setIsFlipped(false);
@@ -177,7 +224,7 @@ export default function FlashcardMasteryLoop({ cards: initialCards, setId, langu
                 setShowTermination(true);
             }
         }, 400);
-    }, [isFlipped, showTermination, currentIndexInQueue, workingQueue, cardStates, setId, syncMastery]);
+    }, [isFlipped, showTermination, currentIndexInQueue, workingQueue, cardStates, set.id, syncMastery]);
 
     const handleFlip = useCallback(() => {
         if (!showTermination) setIsFlipped(prev => !prev);
@@ -302,12 +349,25 @@ export default function FlashcardMasteryLoop({ cards: initialCards, setId, langu
         }
     }
 
-    if (!initialCards || initialCards.length === 0) {
-        return <div className="text-zinc-500 font-bold italic py-20 flex flex-col items-center gap-4">
-            <Sparkle size={48} weight="thin" className="animate-pulse" />
-            Loading flashcards...
-        </div>;
+    if (isGenerating) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-6 animate-pulse">
+                <Sparkle size={64} weight="thin" className="animate-spin text-fuchsia-500" />
+                <p className="font-bold italic text-zinc-500">Generating flashcards...</p>
+            </div>
+        );
     }
+
+    if (genError) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
+                <p className="text-red-500 font-bold">Error: {genError}</p>
+                <button onClick={handleGenerate} className="bg-fuchsia-600 text-white px-6 py-2 rounded-xl">Retry</button>
+            </div>
+        );
+    }
+
+    if (cardStates.length === 0) return null;
 
     const currentCardIdx = workingQueue[currentIndexInQueue];
     const currentCard = cardStates[currentCardIdx];
