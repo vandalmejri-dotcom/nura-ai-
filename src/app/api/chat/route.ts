@@ -8,15 +8,21 @@ export const maxDuration = 10;
 
 export async function POST(req: NextRequest) {
     try {
-        const { context, message, sourceContent } = await req.json();
+        const { messages, message, sourceContent } = await req.json();
 
-        if (!context || !message) {
-            return NextResponse.json({ error: 'Missing context or message.' }, { status: 400 });
+        // LOGS AS PER STEP 1
+        console.log('[Tutor] User message:', message);
+        console.log('[Tutor] Content available:', sourceContent?.length);
+        console.log('[Tutor] History length:', messages?.length);
+
+        if (!message) {
+            return NextResponse.json({ error: 'Missing message.' }, { status: 400 });
         }
 
-        // In Next.js serverless, we expect the frontend to send the sourceContent 
-        // since the server is stateless and doesn't have the documentStore in-memory between warm-ups.
-        const reply = await chatTutor(context, sourceContent || 'No context available.', message);
+        // Use messages array for history if available, fallback to empty array
+        const conversationHistory = messages || [];
+
+        const reply = await chatTutor(conversationHistory, sourceContent || 'No context available.', message);
 
         return NextResponse.json({ success: true, reply });
 

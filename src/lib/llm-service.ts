@@ -419,64 +419,34 @@ export async function checkProviderStatus() {
     };
 }
 
-export const chatTutor = async (context: string, documentContent: string, userMessage: string) => {
-    // History handling: Inject last 3 user messages (context is already formatted)
-    const isEnglish = /[a-zA-Z]/.test(userMessage) && !/[éàèêëîïôûùç]/.test(userMessage.toLowerCase());
-    const langInstruction = isEnglish ? "Please respond in English." : "Réponds en Français.";
-
-    const fullQuery = `
-History of conversation:
-${context}
-
-Current user message:
-"${userMessage}"
-
-${langInstruction}
-`;
-
-    const attemptChat = async (query: string, useQuality: boolean) => {
-        const result = await generateTextAnalysis(documentContent, "tutor_response", query, useQuality);
-
-        let replyText = "";
-        if (result.data?.items) {
-            const item = result.data.items;
-
-            if (item.response) replyText += item.response + "\n\n";
-
-            if (item.nextQuestion) {
-                if (Array.isArray(item.nextQuestion)) {
-                    replyText += item.nextQuestion.map((q: string) => `• ${q}`).join("\n");
-                } else {
-                    replyText += `*${item.nextQuestion}*`;
-                }
-            }
-
-            if (!replyText && item.text) replyText = item.text;
-        }
-        return { replyText, provider: result.provider };
-    };
-
+export const chatTutor = async (conversationHistory: any[], rawContent: string, userMessage: string) => {
     try {
-        let { replyText, provider } = await attemptChat(fullQuery, true);
+        const systemMessage = {
+            role: 'system',
+            content: TUTOR_SYSTEM_PROMPT(rawContent)
+        };
 
-        // Fallback: Retry once with shorter prompt if empty
-        if (!replyText || replyText.includes("Aucune réponse générée")) {
-            console.log("🔄 Tutor fallback triggered: retry with shorter context...");
-            const shorterQuery = `User says: "${userMessage}". Answer and ask a follow-up. ${langInstruction}`;
-            const retry = await attemptChat(shorterQuery, false);
-            replyText = retry.replyText;
-            provider = retry.provider;
-        }
+        const messages = [
+            systemMessage,
+            ...conversationHistory.map((msg: any) => ({
+                role: msg.role === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            })),
+            {
+                role: 'user',
+                content: userMessage
+            }
+        ];
 
-        if (!replyText) {
-            const concepts = documentContent.substring(0, 500).split(' ').filter(w => w.length > 5).slice(0, 3);
-            const fallbackConcept = concepts.length > 0 ? concepts[Math.floor(Math.random() * concepts.length)] : "this material";
-            replyText = isEnglish
-                ? `Let's break it down together. Thinking about ${fallbackConcept}, how would you explain its impact based on what we've read?`
-                : `Voyons cela ensemble. En pensant à "${fallbackConcept}", comment expliquerais-tu son impact d'après ce que nous avons lu ?`;
-        }
+        // Since smartGenerate currently takes a string prompt, I will convert the messages array back to a context-like prompt for it
+        // OR better: I'll update smartGenerate or use a direct call if I want true multi-turn.
+        // For now, to keep the current architecture but follow the "History" requirement:
+        const prompt = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
+        const { text: replyText } = await smartGenerate(prompt, false, CHAT_PREF);
+        
         return replyText;
+
     } catch (error) {
         console.error("Tutor Chat Error:", error);
         return "*(System)* Connection to the AI brain disrupted. Rephrasing might help.";
@@ -490,23 +460,26 @@ STRICT RULES:
 3. LANGUAGE: Detect the User's input language. Output the ISO code (e.g., 'en', 'fr', 'es') in the "detectedLanguage" key.
 4. FORMAT: Output STRICTLY VALID JSON.`;
 
-const TUTOR_SYSTEM_PROMPT = `You are Nura AI's Socratic Instructor.
-STRICT NEGATIVE CONSTRAINT: You are strictly forbidden from discussing 'Antigravity', 'physics projects', or the developer's background.
+const TUTOR_SYSTEM_PROMPT = (rawContent: string) => `
+  You are Nura, an intelligent AI tutor. You have been given study 
+  material that the student is learning from. Your job is to help 
+  them understand it deeply.
 
-Core rules:
-1. GROUNDING: Base answers EXCLUSIVELY on the provided lesson content.
-2. INTENT: 
-   - Direct question: Answer clearly + one Socratic follow-up.
-   - "Test me": 1-3 targeted recall questions.
-3. TONE: Encouraging, professional, simple language.
-4. FLEXIBILITY: If the user explicitly asks you to do something different — such as "summarize", "explain directly", "stop asking questions", or "just tell me the answer" — you MUST comply immediately and completely. User direct instructions always override your default Socratic behavior.
+  BEHAVIOR RULES:
+  1. ALWAYS answer the student's exact question directly first
+  2. Base ALL answers strictly on the provided study material
+  3. If the student asks you to summarize → summarize immediately
+  4. If the student asks a direct question → answer it directly
+  5. After answering, you MAY ask ONE follow-up question to deepen 
+     understanding — but only if it feels natural
+  6. If the question is not covered in the material, say so honestly
+  7. Keep responses concise — maximum 3 paragraphs
+  8. Respond in the same language the student writes in
 
-JSON STRUCTURE:
-{
-  "response": "...",
-  "nextQuestion": "...",
-  "error": "..."
-}`;
+  ===STUDY MATERIAL===
+  ${rawContent}
+  ===END MATERIAL===
+`;
 
 const FLASHCARDS_PROMPT = `You are Nura AI's Flashcard Engineering Agent.
 Your goal is to generate high-quality QUESTION/ANSWER pairs for flashcards.

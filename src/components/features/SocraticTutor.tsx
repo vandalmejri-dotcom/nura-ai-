@@ -43,9 +43,16 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
 
-        const userMessage: Message = { role: 'user', content: input };
+        const currentInput = input;
+        const userMessage: Message = { role: 'user', content: currentInput };
+        
+        // 1. Immediately add user message to chat UI
         setMessages(prev => [...prev, userMessage]);
+        
+        // 6. Clear input field after sending
         setInput('');
+        
+        // 7. Disable send button (via isLoading state)
         setIsLoading(true);
 
         try {
@@ -53,23 +60,32 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: input,
-                    context: messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n'),
-                    sourceContent: sourceContent.substring(0, 10000) // Limit context size
+                    message: currentInput,
+                    // 4. Store/Send full conversation history
+                    messages: messages, 
+                    sourceContent: sourceContent.substring(0, 20000) 
                 }),
             });
 
             const data = await response.json();
 
             if (data.success) {
+                // 3. When response arrives, add it to chat UI
                 setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
             } else {
-                setMessages(prev => [...prev, { role: 'assistant', content: "My neural link is flickering. Could you repeat that or try a different angle?" }]);
+                setMessages(prev => [...prev, { role: 'assistant', content: "My neural link is flickering. I couldn't process that response." }]);
             }
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "Connectivity lost. Ensure your mission control is stable." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Connectivity lost. Please check your connection." }]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
         }
     };
 
@@ -84,13 +100,13 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
                         <Brain size={28} weight="fill" />
                     </div>
                     <div>
-                        <h3 className="font-black italic tracking-tighter uppercase text-xl text-zinc-100">Socratic Neural Link</h3>
+                        <h3 className="font-black italic tracking-tighter uppercase text-xl text-zinc-100">Nura AI Tutor</h3>
                         <div className="flex items-center gap-3">
                             <p className="text-[10px] text-fuchsia-400 uppercase tracking-[0.4em] font-black flex items-center gap-1.5 bg-fuchsia-500/10 px-3 py-1 rounded-full border border-fuchsia-500/20">
-                                <Sparkle size={10} weight="fill" className="animate-pulse" /> Active Dialogue
+                                <Sparkle size={10} weight="fill" className="animate-pulse" /> Active Session
                             </p>
                             <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{sourceName}</span>
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate max-w-[150px]">{sourceName}</span>
                         </div>
                     </div>
                 </div>
@@ -106,14 +122,14 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
             <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar scroll-smooth">
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
-                        <div className={`flex gap-4 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                        <div className={`flex gap-4 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                             <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border transition-all duration-500 ${msg.role === 'user'
                                 ? 'bg-zinc-900 border-white/5 text-zinc-400 shadow-inner'
                                 : 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-400 shadow-[0_0_20px_rgba(217,70,239,0.1)]'
                                 }`}>
                                 {msg.role === 'user' ? <User size={20} weight="bold" /> : <Brain size={20} weight="fill" />}
                             </div>
-                            <div className={`p-6 rounded-[32px] text-base leading-relaxed tracking-tight ${msg.role === 'user'
+                            <div className={`p-6 rounded-[32px] text-base leading-relaxed tracking-tight whitespace-pre-wrap ${msg.role === 'user'
                                 ? 'bg-gradient-to-br from-fuchsia-600 to-violet-700 text-white rounded-tr-none shadow-xl'
                                 : 'bg-white/5 text-zinc-200 border border-white/10 rounded-tl-none backdrop-blur-sm'
                                 }`}>
@@ -123,6 +139,7 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
                     </div>
                 ))}
 
+                {/* 2. Show typing indicator while waiting */}
                 {isLoading && (
                     <div className="flex justify-start animate-pulse">
                         <div className="flex gap-4 items-center">
@@ -130,7 +147,7 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
                                 <CircleNotch size={20} className="animate-spin" />
                             </div>
                             <div className="bg-white/5 border border-white/5 px-6 py-4 rounded-full text-zinc-500 text-[10px] font-black uppercase tracking-[0.5em] italic">
-                                Deciphering Neural Patterns...
+                                Nura is thinking...
                             </div>
                         </div>
                     </div>
@@ -142,23 +159,30 @@ export default function SocraticTutor({ sourceContent, sourceName }: SocraticTut
             <div className="p-8 bg-black/40 backdrop-blur-3xl border-t border-white/10 relative">
                 <div className="absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                 <div className="relative flex items-center gap-4">
-                    <div className="absolute left-6 text-fuchsia-500 opacity-40">
+                    <div className="absolute left-6 top-6 text-fuchsia-500 opacity-40">
                         <Sparkle size={18} weight="fill" />
                     </div>
-                    <input
-                        type="text"
+                    {/* 5. Input must NOT be uppercase. Remove text-transform: uppercase if it was there */}
+                    <textarea
+                        rows={1}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="INPUT NEURAL COMMAND..."
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-[28px] py-5 pl-14 pr-20 text-sm font-bold tracking-widest text-white outline-none focus:border-fuchsia-500/50 transition-all focus:bg-white/[0.05] shadow-inner placeholder:text-zinc-700"
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask Nura anything about your study material..."
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-[28px] py-5 pl-14 pr-20 text-sm font-medium tracking-wide text-white outline-none focus:border-fuchsia-500/50 transition-all focus:bg-white/[0.05] shadow-inner placeholder:text-zinc-700 resize-none overflow-hidden min-h-[60px]"
+                        style={{ height: 'auto' }}
                     />
                     <button
+                        // 7. Disable send button while waiting
                         disabled={!input.trim() || isLoading}
                         onClick={handleSend}
-                        className="absolute right-2 p-4 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white disabled:opacity-20 transition-all hover:scale-[1.05] active:scale-95 shadow-[0_10px_30px_rgba(192,38,211,0.3)] border border-white/20 active:shadow-none group"
+                        className="absolute right-2 bottom-2 p-4 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white disabled:opacity-20 transition-all hover:scale-[1.05] active:scale-95 shadow-[0_10px_30px_rgba(192,38,211,0.3)] border border-white/20 active:shadow-none group"
                     >
-                        <PaperPlaneRight size={24} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
+                        {isLoading ? (
+                           <CircleNotch size={24} weight="bold" className="animate-spin" />
+                        ) : (
+                           <PaperPlaneRight size={24} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
+                        )}
                     </button>
                 </div>
             </div>
