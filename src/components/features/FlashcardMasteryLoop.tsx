@@ -159,6 +159,7 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
     const [currentIndexInQueue, setCurrentIndexInQueue] = useState(0);
     const [showTermination, setShowTermination] = useState(false);
     const [lastAction, setLastAction] = useState<'knew' | 'forgot' | null>(null);
+    const [isRoundCompleting, setIsRoundCompleting] = useState(false);
 
     // Dictionary sync
     const lang = language && DICTIONARY[language] ? language : 'en';
@@ -176,37 +177,30 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         }, { Unfamiliar: 0, Learning: 0, Familiar: 0, Mastered: 0 });
     }, [cardStates]);
 
-    // Initialize or re-sync working queue when cards are loaded/updated
-    useEffect(() => {
-        if (cardStates.length === 0) return;
-
-        const unmastered = cardStates
+    const startNewRound = useCallback((currentStates?: Card[]) => {
+        const source = currentStates || cardStates;
+        const unmastered = source
             .map((c, i) => (c.mastery! < 3 ? i : -1))
             .filter(i => i !== -1);
 
         if (unmastered.length > 0) {
-            setWorkingQueue(unmastered);
-            setCurrentIndexInQueue(0);
-            setShowTermination(false);
-        } else if (cardStates.length > 0) {
-            setShowTermination(true);
-        }
-    }, [cardStates]);
-
-    const startNewRound = useCallback(() => {
-        const unmastered = cardStates
-            .map((c, i) => (c.mastery! < 3 ? i : -1))
-            .filter(i => i !== -1);
-
-        if (unmastered.length > 0) {
-            setWorkingQueue(unmastered);
+            // Shuffle
+            const shuffled = [...unmastered].sort(() => Math.random() - 0.5);
+            setWorkingQueue(shuffled);
             setCurrentIndexInQueue(0);
             setShowTermination(false);
             setIsFlipped(false);
-        } else {
+        } else if (source.length > 0) {
             setShowTermination(true);
         }
     }, [cardStates]);
+
+    // Initialize only once when cardStates are first loaded
+    useEffect(() => {
+        if (cardStates.length > 0 && workingQueue.length === 0 && !showTermination) {
+            startNewRound(cardStates);
+        }
+    }, [cardStates, workingQueue.length, showTermination, startNewRound]);
 
     // HANDLERS
     const handleMasteryUpdate = useCallback((knew: boolean) => {
@@ -219,6 +213,8 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
         const feedback = knew ? 'good' : 'forgot';
 
         // 1. Update LOCAL state
+        // 1. Update LOCAL state immediately
+        let updatedCards: Card[] = [];
         setCardStates(prev => {
             const next = [...prev];
             const card = { ...next[currentIdx] };
@@ -228,6 +224,7 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
                 card.mastery = 0;
             }
             next[currentIdx] = card;
+            updatedCards = next;
             return next;
         });
 
@@ -241,10 +238,20 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
             if (currentIndexInQueue < workingQueue.length - 1) {
                 setCurrentIndexInQueue(prev => prev + 1);
             } else {
-                setShowTermination(true);
+                // Round complete - Check if everything is mastered
+                const stillUnmastered = updatedCards.filter(c => c.mastery! < 3);
+                if (stillUnmastered.length === 0) {
+                    setShowTermination(true);
+                } else {
+                    setIsRoundCompleting(true);
+                    setTimeout(() => {
+                        setIsRoundCompleting(false);
+                        startNewRound(updatedCards);
+                    }, 1500);
+                }
             }
         }, 400);
-    }, [isFlipped, showTermination, currentIndexInQueue, workingQueue, cardStates, set.id, syncMastery]);
+    }, [isFlipped, showTermination, currentIndexInQueue, workingQueue, cardStates, set.id, syncMastery, startNewRound]);
 
     const handleFlip = useCallback(() => {
         if (!showTermination) setIsFlipped(prev => !prev);
@@ -356,7 +363,7 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
                     </div>
 
                     <button
-                        onClick={startNewRound}
+                        onClick={() => startNewRound()}
                         className="group relative px-12 py-6 bg-emerald-500 text-black font-black uppercase tracking-widest rounded-2xl overflow-hidden hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-emerald-500/20"
                     >
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -413,6 +420,16 @@ export default function FlashcardMasteryLoop({ set, language = 'en' }: Flashcard
 
             {/* Flashcard Component */}
             <div className="relative w-full max-w-4xl perspective-2000">
+                {isRoundCompleting && (
+                    <div className="absolute inset-0 z-[60] glass-dark rounded-[48px] flex flex-col items-center justify-center animate-scale-up border-2 border-emerald-500/30">
+                        <div className="relative mb-6">
+                            <ArrowsClockwise size={80} className="text-emerald-400 animate-spin-slow" />
+                        </div>
+                        <h3 className="text-4xl font-black italic uppercase text-emerald-400 tracking-tighter">Round Complete!</h3>
+                        <p className="text-zinc-500 font-bold uppercase tracking-widest mt-2">Reshuffling neural probes...</p>
+                    </div>
+                )}
+
                 {lastAction && (
                     <div className="absolute inset-0 z-50 rounded-[48px] flex items-center justify-center animate-fade-out pointer-events-none">
                         {lastAction === 'knew' ? (
