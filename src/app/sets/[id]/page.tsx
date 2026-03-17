@@ -219,6 +219,7 @@ export default function StudySetDetail() {
                         <RawPreviewPane
                             sourceUrl={set.sourceUrl}
                             rawContent={set.rawContent || set.sourceContent}
+                            rawContentType={set.rawContentType}
                             fileName={set.sourceName}
                         />
                     </div>

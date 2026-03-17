@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 interface RawPreviewPaneProps {
     sourceUrl?: string;
     rawContent?: string;
+    rawContentType?: string;
     fileName?: string;
 }
 
@@ -28,9 +29,9 @@ const extractYouTubeID = (url: string) => {
     return (match && match[1]) ? match[1] : null;
 };
 
-export default function RawPreviewPane({ sourceUrl, rawContent, fileName }: RawPreviewPaneProps) {
+export default function RawPreviewPane({ sourceUrl, rawContent, rawContentType, fileName }: RawPreviewPaneProps) {
     const videoId = sourceUrl ? extractYouTubeID(sourceUrl) : null;
-    const isYouTube = !!videoId;
+    const isYouTube = rawContentType === 'youtube' && !!sourceUrl;
 
     const copyToClipboard = () => {
         if (rawContent) {
@@ -39,18 +40,66 @@ export default function RawPreviewPane({ sourceUrl, rawContent, fileName }: RawP
         }
     };
 
+    if (isYouTube && videoId) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-slide-up">
+                {/* YouTube Video Player */}
+                <div style={{
+                    position: 'relative',
+                    paddingBottom: '56.25%',  // 16:9 aspect ratio
+                    height: 0,
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                    <iframe
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '12px'
+                        }}
+                    />
+                </div>
+
+                {/* Transcript below the video */}
+                <div className="glass-dark p-8 rounded-3xl border border-white/10">
+                    <p style={{
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '2px',
+                        opacity: 0.5,
+                        marginBottom: '12px',
+                        fontWeight: 'bold'
+                    }}>
+                        TRANSCRIPT
+                    </p>
+                    <div style={{ lineHeight: '1.8', opacity: 0.8 }} className="text-zinc-300 whitespace-pre-wrap">
+                        {rawContent}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8 animate-slide-up">
             {/* Header / Info */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-400">
-                        {isYouTube ? <YoutubeLogo weight="fill" size={28} className="text-red-500" /> :
-                            fileName?.toLowerCase().endsWith('.pdf') ? <FilePdf weight="fill" size={28} className="text-orange-500" /> :
-                                <TextT weight="bold" size={28} />}
+                        {fileName?.toLowerCase().endsWith('.pdf') ? <FilePdf weight="fill" size={28} className="text-orange-500" /> :
+                            <TextT weight="bold" size={28} />}
                     </div>
                     <div className="min-w-0">
-                        <h3 className="text-xl font-bold tracking-tight">{isYouTube ? "YouTube Source" : "Original Material"}</h3>
+                        <h3 className="text-xl font-bold tracking-tight">Original Material</h3>
                         <p className="text-sm text-zinc-500 font-medium truncate max-w-[200px] md:max-w-md">{sourceUrl || fileName || 'Raw Input'}</p>
                     </div>
                 </div>
@@ -75,24 +124,11 @@ export default function RawPreviewPane({ sourceUrl, rawContent, fileName }: RawP
                 </div>
             </div>
 
-            {/* Video Embed - Nura "Cyber" Aesthetic */}
-            {isYouTube && (
-                <div className="w-full aspect-video rounded-xl border border-white/10 shadow-[0_0_30px_rgba(168,85,247,0.15)] overflow-hidden bg-black">
-                    <iframe
-                        src={`https://www.youtube.com/embed/${videoId}`}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        title="YouTube Video Preview"
-                    />
-                </div>
-            )}
-
             {/* Hybrid Content View / Transcript */}
             <div className="glass-dark border-white/10 rounded-3xl overflow-hidden">
                 <div className="p-4 bg-white/5 border-b border-white/5 flex items-center justify-between">
                     <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-4">
-                        {isYouTube ? "Video Transcript Extraction" : "Raw Content Engine v1.0"}
+                        Raw Content Engine v1.0
                     </span>
                     <div className="flex items-center gap-1.5 px-4">
                         <div className="w-1.5 h-1.5 rounded-full bg-red-500/50" />
@@ -100,7 +136,7 @@ export default function RawPreviewPane({ sourceUrl, rawContent, fileName }: RawP
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
                     </div>
                 </div>
-                <div className={`p-8 md:p-12 ${isYouTube ? 'max-h-64' : 'max-h-[700px]'} overflow-y-auto custom-scrollbar bg-black/20`}>
+                <div className="p-8 md:p-12 max-h-[700px] overflow-y-auto custom-scrollbar bg-black/20">
                     <div className="text-zinc-300 leading-relaxed space-y-4">
                         {rawContent ? (
                             <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-zinc-900/50 prose-pre:border prose-pre:border-white/5">
@@ -117,7 +153,7 @@ export default function RawPreviewPane({ sourceUrl, rawContent, fileName }: RawP
             </div>
 
             {/* Footer action */}
-            {!isYouTube && sourceUrl && (
+            {sourceUrl && (
                 <div className="p-6 rounded-2xl bg-fuchsia-500/5 border border-fuchsia-500/10 flex items-center justify-between">
                     <p className="text-sm text-zinc-400 font-medium italic">Content extracted from external source</p>
                     <a

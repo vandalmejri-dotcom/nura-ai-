@@ -141,6 +141,7 @@ export async function POST(req: Request) {
         sourceContent: transcript,
         rawContent: transcript,
         rawContentType: 'youtube',
+        sourceUrl: url,
         status: 'ready',
         stats: {
             wordCount: words.length,
@@ -174,6 +175,7 @@ export async function POST(req: Request) {
                 userId: user.id,
                 rawContent: transcript,
                 rawContentType: 'youtube',
+                sourceUrl: url,
                 status: 'ready',
                 metadata: finalStudySet.metadata as any
             }

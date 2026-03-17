@@ -10,6 +10,7 @@ export interface StudySet {
     sourceContent?: string;
     sourceUrl?: string;
     rawContent?: string;
+    rawContentType?: string;
     stats: {
         wordCount: number;
         characterCount: number;

@@ -28,6 +28,7 @@ model StudySet {
   // Study Content Persistence
   rawContent     String?   @db.Text
   rawContentType String?
+  sourceUrl      String?
   status         String?   @default("ready")
   metadata       Json?
   
