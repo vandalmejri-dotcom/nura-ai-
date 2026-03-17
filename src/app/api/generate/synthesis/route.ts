@@ -7,22 +7,43 @@ export const maxDuration = 10;
 
 export async function POST(req: Request) {
     try {
-        const { text, language = 'en' } = await req.json();
+        const { setId, language = 'en' } = await req.json();
 
-        if (!text) {
-            return NextResponse.json({ error: "No content provided." }, { status: 400 });
+        if (!setId) {
+            return NextResponse.json({ error: "Missing setId." }, { status: 400 });
         }
 
+        const { prisma } = await import('@/lib/prisma');
+        const studySet = await prisma.studySet.findUnique({
+            where: { id: setId }
+        }) as any;
+
+        if (!studySet || !studySet.rawContent) {
+            return NextResponse.json({ error: "Study set or content not found." }, { status: 404 });
+        }
+
+        const text = studySet.rawContent;
+
         const result = await generateTextAnalysis(
-            text, 
-            "synthesized_notes", 
-            "Create a structured AI synthesis for this content.", 
+            text,
+            "synthesized_notes",
+            "Generate high-quality synthesized study notes.",
             true // Use quality model for synthesis
         );
 
+        const synthesisData = result.data?.items || "";
+
+        // Save to DB
+        await prisma.studySet.update({
+            where: { id: setId },
+            data: {
+                synthesizedNotes: synthesisData
+            } as any
+        });
+
         return NextResponse.json({
             success: true,
-            data: result.data?.items || ""
+            data: synthesisData
         });
     } catch (error: any) {
         console.error("[Generate Synthesis] Error:", error);

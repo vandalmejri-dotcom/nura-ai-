@@ -7,23 +7,49 @@ export const maxDuration = 10;
 
 export async function POST(req: Request) {
     try {
-        const { text, language = 'en' } = await req.json();
+        const { setId, language = 'en' } = await req.json();
 
-        if (!text) {
-            return NextResponse.json({ error: "No content provided." }, { status: 400 });
+        if (!setId) {
+            return NextResponse.json({ error: "Missing setId." }, { status: 400 });
         }
 
-        // Generate maximum 5 items
+        const { prisma } = await import('@/lib/prisma');
+        const studySet = await prisma.studySet.findUnique({
+            where: { id: setId }
+        }) as any;
+
+        if (!studySet || !studySet.rawContent) {
+            return NextResponse.json({ error: "Study set or content not found." }, { status: 404 });
+        }
+
+        const text = studySet.rawContent;
+
+        // Generate maximum 5 items to stay within 10s limit
         const result = await generateTextAnalysis(
             text, 
             "fill_in_blanks", 
-            "Generate EXACTLY 5 fill-in-the-blank exercises for this content.", 
+            "Generate EXACTLY 5 high-quality fill-in-the-blank questions.", 
             false
         );
 
+        const items = result.data?.items || [];
+        const finalItems = items.slice(0, 5);
+
+        // Save to DB
+        await prisma.studySet.update({
+            where: { id: setId },
+            data: {
+                fillInTheBlanks: finalItems,
+                stats: {
+                    ...(studySet.stats || {}),
+                    fibCount: finalItems.length
+                }
+            } as any
+        });
+
         return NextResponse.json({
             success: true,
-            data: result.data?.items?.slice(0, 5) || []
+            data: finalItems
         });
     } catch (error: any) {
         console.error("[Generate FIB] Error:", error);

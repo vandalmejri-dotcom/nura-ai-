@@ -45,51 +45,35 @@ export async function POST(req: Request) {
         const result = await generateTextAnalysis(
             text, 
             "flashcards", 
-            prompt, 
-            false // Use faster model for cards to meet 10s limit
+            `Provide precisely 10 flashcards for this content. Every card must have a "front" and "back". Target language: ${language}.`, 
+            false
         );
 
-        const rawResponse = JSON.stringify(result.data); // result.data is already an object from llm-service
-        console.log('[Flashcards] rawContent length:', text?.length);
-        console.log('[Flashcards] LLM raw response:', rawResponse);
+        // result.data is already parsed by llm-service.ts
+        const data = result.data || {};
+        const items = data.items || data.flashcards || data.cards || (Array.isArray(data) ? data : []);
 
-        let parsedCards = [];
-        try {
-            // Strip markdown code fences if present
-            const cleaned = rawResponse
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-            
-            const parsed = JSON.parse(cleaned);
-            
-            // Handle both { flashcards: [...] } and direct array
-            parsedCards = Array.isArray(parsed) 
-                ? parsed 
-                : (parsed.flashcards ?? parsed.items ?? parsed.cards ?? []);
-            
-            // Filter out any invalid cards
-            parsedCards = parsedCards.filter(
-                (card: any) => card && card.front && card.back && 
-                        typeof card.front === 'string' && 
-                        typeof card.back === 'string' &&
-                        !card.front.includes('___')
-            );
-            
-            console.log('[Flashcards] Valid cards after filter:', parsedCards.length);
-        } catch (e) {
-            console.error('[Flashcards] JSON parse failed:', e);
-            console.error('[Flashcards] Raw response was:', rawResponse);
-        }
+        console.log('[Flashcards] Raw content length:', text?.length);
+        console.log('[Flashcards] Items count from LLM:', items.length);
 
-        if (parsedCards.length === 0) {
+        // Filter valid cards
+        let finalCards = items
+            .filter((c: any) => c && (c.front || c.question) && (c.back || c.answer))
+            .map((c: any) => ({
+                front: c.front || c.question,
+                back: c.back || c.answer
+            }))
+            .filter((c: any) => !c.front.includes('___'))
+            .slice(0, 10);
+
+        console.log('[Flashcards] Validated cards count:', finalCards.length);
+
+        if (finalCards.length === 0) {
             return NextResponse.json(
-                { error: 'Failed to generate valid flashcards. Please try again.' },
+                { error: 'Failed to generate valid flashcards. The AI response was empty or malformed.' },
                 { status: 500 }
             );
         }
-
-        const finalCards = parsedCards.slice(0, 10);
 
         // Save to DB
         await prisma.studySet.update({
@@ -108,7 +92,7 @@ export async function POST(req: Request) {
             data: finalCards
         });
     } catch (error: any) {
-        console.error("[Generate Flashcards] Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[Generate Flashcards] Fatal Error:", error);
+        return NextResponse.json({ error: error.message || "Internal generation failure." }, { status: 500 });
     }
 }

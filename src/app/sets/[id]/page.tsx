@@ -82,7 +82,7 @@ export default function StudySetDetail() {
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: set.rawContent, language: set.detectedLanguage || 'en' })
+                body: JSON.stringify({ setId: set.id, language: set.detectedLanguage || 'en' })
             });
 
             if (!res.ok) throw new Error("Generation failed");
