@@ -683,6 +683,10 @@ export async function generateTextAnalysis(
     userQuery: string = "",
     useQualityModel: boolean = false
 ): Promise<{ provider: string; data?: any; error?: string }> {
+    const textSlice = (requestedType === "flashcards" || requestedType === "fill_in_blanks")
+        ? text.substring(0, 15000)
+        : text.substring(0, 30000);
+
     const modelPreference = useQualityModel
         ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
         : ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
@@ -751,9 +755,72 @@ ${text.substring(0, 20000)}`;
         throw new Error("Quiz generation failed validation.");
     }
 
-    const textSlice = (requestedType === "flashcards" || requestedType === "fill_in_blanks")
-        ? text.substring(0, 15000)
-        : text.substring(0, 30000);
+    // --- SPECIAL HANDLING FOR FLASHCARDS (STRICT BYPASS) ---
+    if (requestedType === 'flashcards') {
+        let attempts = 0;
+        let lastError = "";
+
+        while (attempts < 2) {
+            attempts++;
+            try {
+                const systemPrompt = `You are a flashcard generation expert. You output ONLY raw JSON.
+No markdown. No backticks. No preamble. No explanations.`;
+
+                const userPrompt = `Generate 10 flashcards based on the study material below.
+  
+STRICT RULES:
+- Each flashcard tests a specific fact from THE MATERIAL BELOW.
+- "front" = a specific, concise question about the material.
+- "back" = the exact answer or explanation from the material.
+- NEVER generate questions about flashcard rules, prompts, or instructions.
+- NEVER generate generic questions not found in the material.
+- Target Language: Match the language of the material.
+- Output format: { "type": "flashcards", "detectedLanguage": "ISO", "items": [{ "front": "...", "back": "..." }] }
+  
+===STUDY MATERIAL START===
+${textSlice}
+===STUDY MATERIAL END===`;
+
+                const { text: rawJson, modelLabel } = await smartGenerate(systemPrompt + "\n\n" + userPrompt, true, modelPreference);
+                const clean = rawJson.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
+                const parsedJson = JSON.parse(clean);
+
+                let items = parsedJson.items || parsedJson.flashcards || [];
+                const forbiddenWords = ["rules", "instructions", "prompt", "generate", "flashcard", "strict", "format", "output", "json"];
+                
+                // Filter out meta-talk
+                items = items.filter((item: any) => {
+                    const front = (item.front || item.question || "").toLowerCase();
+                    const back = (item.back || item.answer || "").toLowerCase();
+                    if (!front || !back) return false;
+                    return !forbiddenWords.some(word => front.includes(word));
+                });
+
+                if (items.length < 5 && attempts < 2) {
+                    console.warn(`[NURA] Flashcards failed quality check (${items.length} cards). Retrying...`);
+                    continue;
+                }
+
+                if (items.length === 0) throw new Error("No valid flashcards remained after filtering.");
+
+                return {
+                    provider: modelLabel,
+                    data: {
+                        type: 'flashcards',
+                        items: items.map((i: any) => ({
+                            front: i.front || i.question,
+                            back: i.back || i.answer
+                        })).slice(0, 10),
+                        detectedLanguage: parsedJson.detectedLanguage || 'unknown'
+                    }
+                };
+            } catch (err: any) {
+                lastError = err.message;
+                console.error(`[NURA] Flashcard Attempt ${attempts} failed:`, err.message);
+            }
+        }
+        throw new Error(`Flashcard generation failed: ${lastError}`);
+    }
 
     const basePrompt = requestedType === "tutor_response"
         ? TUTOR_SYSTEM_PROMPT
@@ -761,9 +828,7 @@ ${text.substring(0, 20000)}`;
             ? SYNTHESIZED_NOTES_PROMPT
             : requestedType === "fill_in_blanks"
                 ? FILL_IN_THE_BLANKS_PROMPT
-                : requestedType === "flashcards"
-                    ? FLASHCARDS_PROMPT
-                    : CENTRAL_SYSTEM_PROMPT;
+                : CENTRAL_SYSTEM_PROMPT;
 
     if (requestedType === "synthesized_notes") {
         const fullPrompt = `${basePrompt}\n\nTEXTE À ANALYSER :\n${textSlice}`;

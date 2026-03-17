@@ -18,34 +18,23 @@ export async function POST(req: Request) {
             where: { id: setId }
         }) as any;
 
-        if (!studySet || !studySet.rawContent) {
-            return NextResponse.json({ error: "Study set or content not found." }, { status: 404 });
+        const rawContent = studySet.rawContent;
+
+        if (!rawContent || rawContent.length < 100) {
+            return NextResponse.json(
+                { error: 'No study content found. Please resubmit your source.' },
+                { status: 422 }
+            );
         }
 
-        const text = studySet.rawContent;
+        console.log('[Flashcards] Content preview:', rawContent.slice(0, 200));
 
-        // Optimized prompt for high-quality, high-speed flashcard generation
-        const prompt = `
-            Task: Generate EXACTLY 10 high-quality flashcards for this content.
-            Target Language: ${language}
-            
-            RULES:
-            - Generate exactly 10 flashcards.
-            - Each card must have a "front" (question) and "back" (answer).
-            - Questions must be specific and test real conceptual understanding.
-            - Answers must be concise (1-3 sentences maximum).
-            - NEVER include "___" or "fill in the blank" formats.
-            - NEVER generate duplicate questions.
-            - Use professional, educational tone.
-            
-            OUTPUT FORMAT: ONLY valid JSON as:
-            { "flashcards": [{ "front": "...", "back": "..." }] }
-        `;
+        const text = rawContent;
 
         const result = await generateTextAnalysis(
             text, 
             "flashcards", 
-            `Provide precisely 10 flashcards for this content. Every card must have a "front" and "back". Target language: ${language}.`, 
+            "", 
             false
         );
 
@@ -54,34 +43,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
-        // result.data is already parsed by llm-service.ts
-        const data = result.data || {};
-        const items = Array.isArray(data) ? data : (data.items || data.flashcards || data.cards || []);
-
-        console.log('[Flashcards] Raw content length:', text?.length);
-        console.log('[Flashcards] Items count from LLM:', items.length);
-        if (items.length === 0) {
-            console.warn('[Flashcards] Empty items returned. Full response:', JSON.stringify(data));
-        }
-
-        // Filter valid cards
-        let finalCards = items
-            .filter((c: any) => c && (c.front || c.question) && (c.back || c.answer))
-            .map((c: any) => ({
-                front: c.front || c.question,
-                back: c.back || c.answer
-            }))
-            .filter((c: any) => !c.front.includes('___'))
-            .slice(0, 10);
-
-        console.log('[Flashcards] Validated cards count:', finalCards.length);
-
-        if (finalCards.length === 0) {
-            return NextResponse.json(
-                { error: 'Failed to generate valid flashcards. The AI response was empty or malformed.' },
-                { status: 500 }
-            );
-        }
+        const finalCards = result.data?.items || [];
 
         // Save to DB
         await prisma.studySet.update({
