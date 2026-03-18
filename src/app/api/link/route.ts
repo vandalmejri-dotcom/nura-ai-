@@ -16,6 +16,20 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
+async function getYouTubeTitle(videoId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.title ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -90,29 +104,35 @@ export async function POST(req: Request) {
 
     let transcript: string | null = null;
     let metadata: any = null;
+    let oEmbedTitle = '';
 
     try {
-        console.log(`[NURA] Attempting direct extraction via Supadata...`);
+        console.log(`[NURA] Attempting extraction via Supadata & oEmbed...`);
         
-        const supadataRes = await fetch(
-            `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`,
-            {
-                method: 'GET',
-                headers: { 'x-api-key': process.env.SUPADATA_API_KEY! },
-                signal: AbortSignal.timeout(20000),
-            }
-        );
+        const [supadataRes, videoTitle] = await Promise.all([
+            fetch(
+                `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`,
+                {
+                    method: 'GET',
+                    headers: { 'x-api-key': process.env.SUPADATA_API_KEY! },
+                    signal: AbortSignal.timeout(20000),
+                }
+            ),
+            getYouTubeTitle(videoId)
+        ]);
+
+        oEmbedTitle = videoTitle;
 
         if (supadataRes.ok) {
             const sData = await supadataRes.json();
             transcript = sData.content || sData.transcript || '';
             metadata = {
-                title: sData.title || 'YouTube Video',
+                title: oEmbedTitle || sData.title || 'YouTube Video',
                 channel: sData.channel || 'YouTube',
                 duration: sData.duration || 0,
                 thumbnail: sData.thumbnail || null
             };
-            console.log(`[NURA] Direct Supadata Success!`);
+            console.log(`[NURA] Extraction Success!`);
         } else {
             const errData = await supadataRes.json().catch(() => ({}));
             throw new Error(errData.error || `Supadata API error: ${supadataRes.status}`);
@@ -131,8 +151,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fix 1: Use Supadata source title if available, fallback to AI generation
-    const sourceTitle = metadata?.title;
+    // Fix: Use oEmbed title first, then Supadata title, fallback to AI generation
+    const sourceTitle = oEmbedTitle || metadata?.title;
     const generatedTitle = (sourceTitle && sourceTitle !== 'Unknown Title' && sourceTitle !== 'YouTube Video' && sourceTitle !== 'YouTube Analysis')
       ? sourceTitle
       : await generateStudySetTitle(transcript);
