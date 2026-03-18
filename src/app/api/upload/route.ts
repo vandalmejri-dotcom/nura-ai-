@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
                     }
 
                     const cleanText = text ? text.replace(/\0/g, '').trim() : '';
-                    if (cleanText.length < 50) {
-                        throw new Error("Extracted text is too short or empty.");
+                    if (cleanText.length < 100) {
+                        throw new Error("Extracted text is too short (min 100 characters).");
                     }
 
                     // --- NEW: LAZY GENERATION ARCHITECTURE ---

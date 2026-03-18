@@ -917,6 +917,13 @@ Instructions finales:
 }
 
 export async function generateStudySetTitle(content: string): Promise<string> {
+    if (!content || content.trim().length < 100) {
+        console.error('[Title Gen] Content too short or empty:', content?.length);
+        return 'Study Session';
+    }
+
+    console.log('[Title Gen] Generating title for content length:', content.length, 'Preview:', content.slice(0, 100));
+
     const prompt = `Based on the study material below, generate a 
     short, specific, compelling title (maximum 6 words) that captures 
     the main topic. 

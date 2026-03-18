@@ -64,14 +64,15 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const transcript: string = data.content ?? '';
-    const generatedTitle = await generateStudySetTitle(transcript);
 
-    if (!transcript || transcript.length < 50) {
+    if (!transcript || transcript.length < 100) {
       return NextResponse.json(
-        { error: 'Transcript is empty or too short to process.' },
+        { error: 'Transcript is empty or too short (min 100 chars) to process.' },
         { status: 422 }
       );
     }
+
+    const generatedTitle = await generateStudySetTitle(transcript);
 
     return NextResponse.json({
       success: true,

@@ -27,6 +27,14 @@ export async function POST(req: Request) {
     // --- NON-YOUTUBE BRANCH (FALLBACK TO GENERIC) ---
     if (!url || !ytUrlRegex.test(url)) {
         const content = body.text || `Web content from: ${url}`;
+        
+        if (!content || content.length < 100) {
+            return NextResponse.json(
+                { error: 'Input text is too short (min 100 characters).' },
+                { status: 422 }
+            );
+        }
+
         const generatedTitle = await generateStudySetTitle(content);
         const words = content.split(/\s+/).filter((w: string) => w.length > 4);
         
@@ -116,17 +124,9 @@ export async function POST(req: Request) {
             { status: 422 }
         );
     }
-
-    if (!transcript) {
+    if (!transcript || transcript.length < 100) {
       return NextResponse.json(
-        { error: 'YouTube extraction produced no content.' },
-        { status: 422 }
-      );
-    }
-
-    if (!transcript) {
-      return NextResponse.json(
-        { error: 'YouTube extraction produced no content.' },
+        { error: 'YouTube transcript is too short or missing.' },
         { status: 422 }
       );
     }
