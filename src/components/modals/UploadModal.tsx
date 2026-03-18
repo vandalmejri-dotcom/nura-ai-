@@ -93,6 +93,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         }
     };
 
+    const isValidYouTubeUrl = (url: string): boolean => {
+        return url.includes('youtube.com') || url.includes('youtu.be');
+    };
+
     const toggleOption = (id: string) => {
         setOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
     };
@@ -134,7 +138,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 payload.blobUrl = blob.url;
                 payload.fileName = selectedFile.name;
             } else if (link) {
-                payload.link = link;
+                if (!isValidYouTubeUrl(link)) {
+                    throw new Error("Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link.");
+                }
+                payload.url = link; // Fix: Sending 'url' to match API expectation
                 setProgress(30);
             } else if (rawText) {
                 payload.text = rawText;
