@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { generateStudySetTitle } from '@/lib/llm-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const transcript: string = data.content ?? '';
+    const generatedTitle = await generateStudySetTitle(transcript);
 
     if (!transcript || transcript.length < 50) {
       return NextResponse.json(
@@ -75,9 +77,10 @@ export async function POST(req: Request) {
       success: true,
       data: {
         transcript,
+        title: generatedTitle,
         wordCount: transcript.split(/\s+/).filter(Boolean).length,
         metadata: {
-          title: data.title ?? 'Unknown Title',
+          title: generatedTitle,
           duration: data.duration ?? 0,
           channel: data.channel ?? 'Unknown',
           thumbnail: null,

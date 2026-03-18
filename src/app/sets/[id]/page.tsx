@@ -46,6 +46,12 @@ export default function StudySetDetail() {
         }
     }, [id, sets, loading]);
 
+    useEffect(() => {
+        if (set?.title) {
+            document.title = `${set.title} | Nura AI`;
+        }
+    }, [set?.title]);
+
     const tabs = React.useMemo(() => [
         { id: 'synthesis', label: 'AI Synthesis', icon: Sparkle, disabled: false },
         { id: 'notes', label: 'Raw Input', icon: FileText, disabled: false },

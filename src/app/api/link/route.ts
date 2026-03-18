@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { generateStudySetTitle } from '@/lib/llm-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,11 +27,12 @@ export async function POST(req: Request) {
     // --- NON-YOUTUBE BRANCH (FALLBACK TO GENERIC) ---
     if (!url || !ytUrlRegex.test(url)) {
         const content = body.text || `Web content from: ${url}`;
+        const generatedTitle = await generateStudySetTitle(content);
         const words = content.split(/\s+/).filter((w: string) => w.length > 4);
         
         const studySet = {
             id: 'temp_' + Date.now(),
-            title: url ? 'Link Analysis' : 'Text Analysis',
+            title: generatedTitle,
             sourceName: url ? url : 'Raw Text',
             generatedBy: 'Nura AI (Lazy)',
             sourceContent: content,
@@ -130,12 +132,14 @@ export async function POST(req: Request) {
     }
 
     // --- NEW: LAZY GENERATION ARCHITECTURE ---
-    // We NO LONGER generate everything at once. We only save and return the transcript.
+    // Generate AI Title
+    const generatedTitle = await generateStudySetTitle(transcript);
+
     const words = transcript.split(/\s+/).filter(w => w.length > 4);
     
     let finalStudySet: any = {
         id: 'temp_' + Date.now(),
-        title: metadata?.title || 'YouTube Analysis',
+        title: generatedTitle,
         sourceName: metadata?.title || 'YouTube Video',
         generatedBy: 'Nura AI (Lazy)',
         sourceContent: transcript,

@@ -1,6 +1,7 @@
 // src/app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { parsePDF, parseDOCX } from '@/lib/ingestion';
+import { generateStudySetTitle } from '@/lib/llm-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,11 +46,12 @@ export async function POST(req: NextRequest) {
                     }
 
                     // --- NEW: LAZY GENERATION ARCHITECTURE ---
+                    const generatedTitle = await generateStudySetTitle(cleanText);
                     const words = cleanText.split(/\s+/).filter(w => w.length > 4);
                     
                     const finalData: any = {
                         id: 'set_' + Date.now(),
-                        title: fileName.replace(/\.[^/.]+$/, ''),
+                        title: generatedTitle,
                         sourceName: fileName,
                         generatedBy: 'Nura AI (Lazy)',
                         sourceContent: cleanText,

@@ -912,6 +912,37 @@ Instructions finales:
         };
     } catch (err: any) {
         console.error("Analysis Validation Error:", err.message);
-        throw new Error(`Technical Failure: The AI output did not meet Nura's quality constraints (${err.message}).`);
+        throw new Error(`Technical Failure: The AI output did not meet Nura's quality constraints (\${err.message}).`);
+    }
+}
+
+export async function generateStudySetTitle(content: string): Promise<string> {
+    const prompt = `Based on the study material below, generate a 
+    short, specific, compelling title (maximum 6 words) that captures 
+    the main topic. 
+    
+    RULES:
+    - Maximum 6 words
+    - Be specific to the actual topic (not generic)
+    - Title case format
+    - No quotes, no punctuation at the end
+    - Examples of good titles:
+      "Claude Code for Solo Entrepreneurs"
+      "Quantum Computing Fundamentals Explained"  
+      "French Revolution Causes and Effects"
+      "Machine Learning Neural Networks Basics"
+    
+    Output ONLY the title, nothing else.
+    
+    ===MATERIAL===
+    \${content.slice(0, 1500)}
+    ===END===`;
+
+    try {
+        const { text } = await smartGenerate(prompt, false, ['llama-3.1-8b-instant', 'gemini-1.5-flash']);
+        return text.trim().replace(/^["']|["']$/g, '');
+    } catch (e) {
+        console.error("[generateStudySetTitle] Error:", e);
+        return 'Study Session';
     }
 }
