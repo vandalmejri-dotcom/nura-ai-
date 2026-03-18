@@ -72,7 +72,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const generatedTitle = await generateStudySetTitle(transcript);
+    // Fix 1: Use Supadata source title if available, fallback to AI generation
+    const sourceTitle = data.title;
+    const generatedTitle = (sourceTitle && sourceTitle !== 'Unknown Title' && sourceTitle !== 'YouTube Video')
+      ? sourceTitle
+      : await generateStudySetTitle(transcript);
 
     return NextResponse.json({
       success: true,

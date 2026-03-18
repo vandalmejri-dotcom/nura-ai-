@@ -131,10 +131,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- NEW: LAZY GENERATION ARCHITECTURE ---
-    // Generate AI Title
-    const generatedTitle = await generateStudySetTitle(transcript);
+    // Fix 1: Use Supadata source title if available, fallback to AI generation
+    const sourceTitle = metadata?.title;
+    const generatedTitle = (sourceTitle && sourceTitle !== 'Unknown Title' && sourceTitle !== 'YouTube Video' && sourceTitle !== 'YouTube Analysis')
+      ? sourceTitle
+      : await generateStudySetTitle(transcript);
 
+    // --- NEW: LAZY GENERATION ARCHITECTURE ---
     const words = transcript.split(/\s+/).filter(w => w.length > 4);
     
     let finalStudySet: any = {

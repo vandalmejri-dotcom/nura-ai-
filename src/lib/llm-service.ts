@@ -924,22 +924,15 @@ export async function generateStudySetTitle(content: string): Promise<string> {
 
     console.log('[Title Gen] Generating title for content length:', content.length, 'Preview:', content.slice(0, 100));
 
-    const prompt = `Based on the study material below, generate a 
-    short, specific, compelling title (maximum 6 words) that captures 
-    the main topic. 
+    const prompt = `You are an expert at extracting concise, specific titles from study material.
+    Your goal is to generate a short, compelling title (maximum 6 words) that captures the main topic.
     
-    RULES:
-    - Maximum 6 words
-    - Be specific to the actual topic (not generic)
-    - Title case format
-    - No quotes, no punctuation at the end
-    - Examples of good titles:
-      "Claude Code for Solo Entrepreneurs"
-      "Quantum Computing Fundamentals Explained"  
-      "French Revolution Causes and Effects"
-      "Machine Learning Neural Networks Basics"
-    
-    Output ONLY the title, nothing else.
+    CRITICAL RULES:
+    - ONLY use words and concepts that appear in the material below
+    - Do NOT invent or imagine topics not present in the text
+    - Be specific (e.g., "The French Revolution" instead of "History Lesson")
+    - Title Case format
+    - Output ONLY the title, nothing else, no quotes, no punctuation
     
     ===MATERIAL===
     \${content.slice(0, 1500)}
@@ -947,7 +940,15 @@ export async function generateStudySetTitle(content: string): Promise<string> {
 
     try {
         const { text } = await smartGenerate(prompt, false, ['llama-3.1-8b-instant', 'gemini-1.5-flash']);
-        return text.trim().replace(/^["']|["']$/g, '');
+        const title = text.trim().replace(/^["']|["']$/g, '');
+        
+        // Validation: If title is too long, empty, or suspicious, use a safe fallback
+        if (!title || title.length > 60 || title.length < 3 || title.includes('?')) {
+            console.warn('[Title Gen] Validation failed for generated title:', title);
+            return 'Study Session';
+        }
+        
+        return title;
     } catch (e) {
         console.error("[generateStudySetTitle] Error:", e);
         return 'Study Session';
