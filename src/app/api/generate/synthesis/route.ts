@@ -32,12 +32,13 @@ export async function POST(req: Request) {
         );
 
         const synthesisData = result.data?.items || "";
+        const storageData = typeof synthesisData === 'object' ? JSON.stringify(synthesisData) : synthesisData;
 
         // Save to DB
         await prisma.studySet.update({
             where: { id: setId },
             data: {
-                synthesizedNotes: synthesisData
+                synthesizedNotes: storageData
             } as any
         });
 

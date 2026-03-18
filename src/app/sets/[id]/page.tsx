@@ -24,6 +24,7 @@ import RawPreviewPane from '@/components/features/RawPreviewPane';
 import FlashcardMasteryLoop from '@/components/features/FlashcardMasteryLoop';
 import QuizArena from '@/components/features/QuizArena';
 import FillInTheBlanks from '@/components/features/FillInTheBlanks';
+import AISynthesis from '@/components/features/AISynthesis';
 import ReactMarkdown from 'react-markdown';
 
 type Tab = 'notes' | 'synthesis' | 'flashcards' | 'quiz' | 'podcast' | 'tutor' | 'fillInTheBlanks';
@@ -182,26 +183,12 @@ export default function StudySetDetail() {
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fuchsia-500/5 blur-[120px] rounded-full -z-10" />
 
                 {activeTab === 'synthesis' && (
-                    <div className="prose prose-invert max-w-none space-y-8 animate-slide-up">
-                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/10 w-fit">
-                            <div className="text-sm font-bold text-violet-500">{set.stats?.quizCount || 0}</div>
-                            <div className="text-[10px] font-bold text-violet-500/60 uppercase tracking-widest">Questions</div>
-                        </div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400">
-                                <Sparkle weight="bold" size={24} />
-                            </div>
-                            <h2 className="text-2xl font-bold m-0 italic text-gradient">AI Synthesis <span className="text-zinc-400 text-sm font-normal not-italic ml-2">(Optimized for Recall)</span></h2>
-                        </div>
-                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[40px] p-10 md:p-16 lg:p-24 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-fuchsia-500/50 to-transparent opacity-30" />
-                            {set.synthesizedNotes ? (
-                                <div className="relative z-10 transition-all duration-700 synthesized-content">
-                                    <ReactMarkdown>
-                                        {set.synthesizedNotes}
-                                    </ReactMarkdown>
-                                </div>
-                            ) : (
+                    <div className="space-y-8 animate-fade-in w-full">
+                        {set.synthesizedNotes ? (
+                            <AISynthesis data={set.synthesizedNotes} />
+                        ) : (
+                            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[40px] p-10 md:p-16 lg:p-24 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-fuchsia-500/50 to-transparent opacity-30" />
                                 <LazyPlaceholder 
                                     type="synthesis" 
                                     isGenerating={isGenerating} 
@@ -209,8 +196,8 @@ export default function StudySetDetail() {
                                     icon={<Sparkle size={48} weight="thin" />}
                                     label="AI Synthesis"
                                 />
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

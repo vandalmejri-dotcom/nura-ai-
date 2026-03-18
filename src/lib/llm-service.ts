@@ -554,25 +554,76 @@ JSON STRUCTURE:
   ]
 }`;
 
-export const SYNTHESIZED_NOTES_PROMPT = `You are the Lead Information Architect for Nura AI. Your objective is to take raw, unstructured user input and transform it into highly optimized, readable, and structured study notes.
+export const SYNTHESIZED_NOTES_SYSTEM_PROMPT = `You are an expert academic note-taker and study coach.
+Your job is to transform raw study material into the most 
+comprehensive, beautiful, and exam-ready notes possible.
+A student should be able to read ONLY your notes and ace their exam.
+You output ONLY valid JSON. No markdown. No backticks. No preamble.`;
 
-Output Constraints:
-- NO JSON. You must output pure, clean Markdown.
-- Zero Fluff. Strip away redundant words. Maximize the signal-to-noise ratio.
-- Language Matching: You must generate the notes in the same language as the user's raw input.
+export const SYNTHESIZED_NOTES_USER_PROMPT = `Analyze the study material below and generate comprehensive study 
+notes in this EXACT JSON format:
 
-Structural Framework (Always follow this exact format):
+{
+  "title": "Topic title (concise, specific)",
+  "examReadinessScore": 95,
+  "tldr": "2-3 sentence executive summary of the entire material",
+  "keyConcepts": [
+    {
+      "concept": "Concept name",
+      "definition": "Clear, precise definition",
+      "whyItMatters": "Why this concept is important",
+      "example": "Concrete real-world example"
+    }
+  ],
+  "mainSections": [
+    {
+      "emoji": "relevant emoji",
+      "title": "Section title",
+      "content": "Detailed explanation (3-5 sentences minimum)",
+      "bulletPoints": ["key point 1", "key point 2", "key point 3"],
+      "examTip": "What examiners typically ask about this section"
+    }
+  ],
+  "criticalFacts": [
+    "Must-know fact 1",
+    "Must-know fact 2",
+    "Must-know fact 3"
+  ],
+  "commonMistakes": [
+    {
+      "mistake": "Common misconception or error",
+      "correction": "The correct understanding"
+    }
+  ],
+  "examQuestions": [
+    {
+      "question": "Likely exam question",
+      "answer": "Model answer"
+    }
+  ],
+  "memoryAids": [
+    {
+      "item": "Thing to remember",
+      "aid": "Mnemonic, analogy or memory trick"
+    }
+  ],
+  "summary": "Final comprehensive paragraph tying everything together"
+}
 
-### 🧠 Core Concept (TL;DR)
-(Provide a single, powerful sentence summarizing the absolute fundamental truth of the text.)
+STRICT RULES:
+- keyConcepts: minimum 5, maximum 10
+- mainSections: minimum 4, cover ALL major topics in the material
+- criticalFacts: exactly 5-7 most important facts
+- commonMistakes: minimum 3
+- examQuestions: exactly 5 likely exam questions with full answers
+- memoryAids: minimum 3
+- Be SPECIFIC to this material — no generic filler content
+- Every section must contain information FROM the material only
+- Content must be detailed enough to study from without the original
 
-### 📌 Key Mechanics & Insights
-(Break down the text into 3-5 logical bullet points. Use bolding for critical terms. If there are processes or steps, use numbered lists.)
-
-### 🌍 Real-World Application / Context
-(Provide a brief explanation of how this concept is used in practice, drawing strictly from the provided text.)
-
-Execution: Analyze the provided text and immediately output the synthesized notes using the Markdown framework above.`;
+===STUDY MATERIAL===
+\${rawContent}
+===END MATERIAL===`;
 
 const QuestionSchema = z.object({
     question: z.string().min(10),
@@ -798,18 +849,26 @@ ${textSlice}
     const basePrompt = requestedType === "tutor_response"
         ? TUTOR_SYSTEM_PROMPT
         : requestedType === "synthesized_notes"
-            ? SYNTHESIZED_NOTES_PROMPT
+            ? SYNTHESIZED_NOTES_SYSTEM_PROMPT
             : requestedType === "fill_in_blanks"
                 ? FILL_IN_THE_BLANKS_PROMPT
                 : CENTRAL_SYSTEM_PROMPT;
 
     if (requestedType === "synthesized_notes") {
-        const fullPrompt = `${basePrompt}\n\nTEXTE À ANALYSER :\n${textSlice}`;
-        const { text: markdown, modelLabel } = await smartGenerate(fullPrompt, false, modelPreference);
-        return {
-            provider: modelLabel,
-            data: { type: "synthesized_notes", items: markdown }
-        };
+        const fullPrompt = SYNTHESIZED_NOTES_SYSTEM_PROMPT + "\n\n" + SYNTHESIZED_NOTES_USER_PROMPT.replace('${rawContent}', textSlice);
+        const { text: rawJson, modelLabel } = await smartGenerate(fullPrompt, true, modelPreference);
+        
+        try {
+            const clean = rawJson.replace(/^```(?:json)?/gm, '').replace(/```$/gm, '').trim();
+            const parsedJson = JSON.parse(clean);
+            return {
+                provider: modelLabel,
+                data: { type: "synthesized_notes", items: parsedJson }
+            };
+        } catch (err: any) {
+            console.error("Synthesis Parsing Error:", err.message);
+            throw new Error(`Failed to parse AI synthesis: ${err.message}`);
+        }
     }
 
     const prompt = `
