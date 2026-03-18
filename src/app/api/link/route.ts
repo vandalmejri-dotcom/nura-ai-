@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
-import { generateStudySetTitle } from '@/lib/llm-service';
+import prisma from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Vercel: 60s timeout
+export const maxDuration = 30;
 
 function extractVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+  );
+  return match ? match[1] : null;
 }
 
 async function getYouTubeTitle(videoId: string): Promise<string> {
@@ -32,197 +28,113 @@ async function getYouTubeTitle(videoId: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { link, url: providedUrl, options, language } = body;
-    const url = providedUrl || link;
+    const { url, studySetId } = await req.json();
 
+    // Validate URL
     const ytUrlRegex = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/|embed\/)|youtu\.be\/)[\w-]{11}/;
-    
-    // --- NON-YOUTUBE BRANCH (FALLBACK TO GENERIC) ---
     if (!url || !ytUrlRegex.test(url)) {
-        const content = body.text || `Web content from: ${url}`;
-        
-        if (!content || content.length < 100) {
-            return NextResponse.json(
-                { error: 'Input text is too short (min 100 characters).' },
-                { status: 422 }
-            );
-        }
-
-        const generatedTitle = await generateStudySetTitle(content);
-        const words = content.split(/\s+/).filter((w: string) => w.length > 4);
-        
-        const studySet = {
-            id: 'temp_' + Date.now(),
-            title: generatedTitle,
-            sourceName: url ? url : 'Raw Text',
-            generatedBy: 'Nura AI (Lazy)',
-            sourceContent: content,
-            rawContent: content,
-            rawContentType: url ? 'link' : 'text',
-            status: 'ready',
-            stats: {
-                wordCount: words.length,
-                characterCount: content.length,
-                cardCount: 0,
-                quizCount: 0,
-                fibCount: 0,
-            }
-        };
-
-        // Attempt persistence
-        try {
-            const { prisma } = await import('@/lib/prisma');
-            const user = await prisma.user.upsert({
-                where: { email: 'system@nura.ai' },
-                update: {},
-                create: { email: 'system@nura.ai', name: 'Nura System User' }
-            });
-
-            const dbSet = await prisma.studySet.create({
-                data: {
-                    title: studySet.title,
-                    userId: user.id,
-                    rawContent: content,
-                    rawContentType: studySet.rawContentType,
-                    status: 'ready'
-                }
-            });
-            studySet.id = dbSet.id;
-        } catch (e: any) {
-            console.warn("[NURA] Persistence failed for generic link/text:", e.message);
-        }
-
-        return NextResponse.json({ success: true, data: studySet });
+      return NextResponse.json(
+        { error: 'Invalid YouTube URL' },
+        { status: 400 }
+      );
     }
 
-    // --- YOUTUBE BRANCH (Supadata Harvester) ---
     const videoId = extractVideoId(url);
     if (!videoId) {
-      return NextResponse.json({ error: 'Could not parse video ID from URL' }, { status: 400 });
-    }
-
-    let transcript: string | null = null;
-    let metadata: any = null;
-    let oEmbedTitle = '';
-
-    try {
-        console.log(`[NURA] Attempting extraction via Supadata & oEmbed...`);
-        
-        const [supadataRes, videoTitle] = await Promise.all([
-            fetch(
-                `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`,
-                {
-                    method: 'GET',
-                    headers: { 'x-api-key': process.env.SUPADATA_API_KEY! },
-                    signal: AbortSignal.timeout(20000),
-                }
-            ),
-            getYouTubeTitle(videoId)
-        ]);
-
-        oEmbedTitle = videoTitle;
-
-        if (supadataRes.ok) {
-            const sData = await supadataRes.json();
-            transcript = sData.content || sData.transcript || '';
-            metadata = {
-                title: oEmbedTitle || sData.title || 'YouTube Video',
-                channel: sData.channel || 'YouTube',
-                duration: sData.duration || 0,
-                thumbnail: sData.thumbnail || null
-            };
-            console.log(`[NURA] Extraction Success!`);
-        } else {
-            const errData = await supadataRes.json().catch(() => ({}));
-            throw new Error(errData.error || `Supadata API error: ${supadataRes.status}`);
-        }
-    } catch (e: any) {
-        console.error(`[NURA] YouTube Extraction Failed:`, e.message);
-        return NextResponse.json(
-            { error: e.message || "YouTube is aggressively blocking. Please use the Raw Text fallback." },
-            { status: 422 }
-        );
-    }
-    if (!transcript || transcript.length < 100) {
       return NextResponse.json(
-        { error: 'YouTube transcript is too short or missing.' },
+        { error: 'Could not parse video ID from URL' },
+        { status: 400 }
+      );
+    }
+
+    // Check transcript service is configured
+    const serviceUrl = process.env.TRANSCRIPT_SERVICE_URL;
+    if (!serviceUrl) {
+      console.error('[Harvest] TRANSCRIPT_SERVICE_URL is not set');
+      return NextResponse.json(
+        { error: 'Transcript service is not configured.' },
+        { status: 500 }
+      );
+    }
+
+    // Fetch transcript from Render service
+    console.log('[Harvest] Fetching transcript for:', videoId);
+    const transcriptRes = await fetch(`${serviceUrl}/transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const transcriptData = await transcriptRes.json();
+
+    if (!transcriptRes.ok) {
+      console.error('[Harvest] Transcript service error:', transcriptData);
+      return NextResponse.json(
+        { error: transcriptData.detail ?? 'Transcript unavailable for this video.' },
+        { status: transcriptRes.status }
+      );
+    }
+
+    const transcript: string = transcriptData.transcript ?? '';
+
+    if (!transcript || transcript.length < 50) {
+      return NextResponse.json(
+        { error: 'Transcript is empty or too short to process.' },
         { status: 422 }
       );
     }
 
-    // Fix: Use oEmbed title first, then Supadata title, fallback to AI generation
-    const sourceTitle = oEmbedTitle || metadata?.title;
-    const generatedTitle = (sourceTitle && sourceTitle !== 'Unknown Title' && sourceTitle !== 'YouTube Video' && sourceTitle !== 'YouTube Analysis')
-      ? sourceTitle
-      : await generateStudySetTitle(transcript);
+    console.log('[Harvest] Transcript length:', transcript.length);
 
-    // --- NEW: LAZY GENERATION ARCHITECTURE ---
-    const words = transcript.split(/\s+/).filter(w => w.length > 4);
-    
-    let finalStudySet: any = {
-        id: 'temp_' + Date.now(),
-        title: generatedTitle,
-        sourceName: metadata?.title || 'YouTube Video',
-        generatedBy: 'Nura AI (Lazy)',
-        sourceContent: transcript,
-        rawContent: transcript,
-        rawContentType: 'youtube',
-        sourceUrl: url,
-        status: 'ready',
-        stats: {
-            wordCount: words.length,
-            characterCount: transcript.length,
-            cardCount: 0,
-            quizCount: 0,
-            fibCount: 0,
+    // Get video title from YouTube oEmbed (free, no auth needed)
+    const videoTitle = await getYouTubeTitle(videoId);
+    const title = videoTitle || 'YouTube Video';
+
+    console.log('[Harvest] Video title:', title);
+
+    // Save to database if studySetId provided
+    if (studySetId) {
+      await prisma.studySet.update({
+        where: { id: studySetId },
+        data: {
+          title,
+          rawContent: transcript,
+          rawContentType: 'youtube',
+          sourceUrl: url,
+          status: 'ready',
         },
-        metadata: {
-            ...metadata,
-            sourceUrl: url,
-            extractedAt: new Date().toISOString()
-        }
-    };
-
-    try {
-        const { prisma } = await import('@/lib/prisma');
-        
-        const user = await prisma.user.upsert({
-            where: { email: 'system@nura.ai' },
-            update: {},
-            create: {
-                email: 'system@nura.ai',
-                name: 'Nura System User'
-            }
-        });
-
-        const dbSet = await prisma.studySet.create({
-            data: {
-                title: finalStudySet.title,
-                userId: user.id,
-                rawContent: transcript,
-                rawContentType: 'youtube',
-                sourceUrl: url,
-                status: 'ready',
-                metadata: finalStudySet.metadata as any
-            }
-        });
-
-        finalStudySet.id = dbSet.id;
-        console.log(`[NURA] Lazy StudySet created in DB: ${dbSet.id}`);
-
-    } catch (e: any) {
-        console.warn("[NURA] Prisma persistence failed:", e.message);
+      });
     }
 
     return NextResponse.json({
       success: true,
-      data: finalStudySet
+      data: {
+        transcript,
+        title,
+        wordCount: transcript.split(/\s+/).filter(Boolean).length,
+        metadata: {
+          title,
+          duration: 0,
+          channel: 'Unknown',
+          thumbnail: null,
+          sourceUrl: url,
+          extractedAt: new Date().toISOString(),
+        },
+      },
     });
 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[YouTube Harvester] Fatal:', message);
+
+    if (message.includes('fetch failed') || message.includes('ECONNREFUSED')) {
+      return NextResponse.json(
+        { error: 'Transcript service is temporarily unavailable. Please try again in 30 seconds.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Transcript extraction failed. Please try again.' },
       { status: 500 }

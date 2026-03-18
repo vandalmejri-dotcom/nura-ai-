@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { generateStudySetTitle } from '@/lib/llm-service';
+import prisma from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 function extractVideoId(url: string): string | null {
   const match = url.match(
@@ -28,8 +28,9 @@ async function getYouTubeTitle(videoId: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { url } = await req.json();
+    const { url, studySetId } = await req.json();
 
+    // Validate URL
     const ytUrlRegex = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/|embed\/)|youtu\.be\/)[\w-]{11}/;
     if (!url || !ytUrlRegex.test(url)) {
       return NextResponse.json(
@@ -39,74 +40,83 @@ export async function POST(req: Request) {
     }
 
     const videoId = extractVideoId(url);
+    if (!videoId) {
+      return NextResponse.json(
+        { error: 'Could not parse video ID from URL' },
+        { status: 400 }
+      );
+    }
 
-    const apiKey = process.env.SUPADATA_API_KEY;
-    if (!apiKey) {
-      console.error('[Supadata] SUPADATA_API_KEY is not set');
+    // Check transcript service is configured
+    const serviceUrl = process.env.TRANSCRIPT_SERVICE_URL;
+    if (!serviceUrl) {
+      console.error('[Harvest] TRANSCRIPT_SERVICE_URL is not set');
       return NextResponse.json(
         { error: 'Transcript service is not configured.' },
         { status: 500 }
       );
     }
 
-    const supadataUrl = `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`;
+    // Fetch transcript from Render service
+    console.log('[Harvest] Fetching transcript for:', videoId);
+    const transcriptRes = await fetch(`${serviceUrl}/transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(20000),
+    });
 
-    const [transcriptRes, oEmbedTitle] = await Promise.all([
-      fetch(supadataUrl, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-        },
-        signal: AbortSignal.timeout(8000),
-      }),
-      videoId ? getYouTubeTitle(videoId) : Promise.resolve('')
-    ]);
+    const transcriptData = await transcriptRes.json();
 
     if (!transcriptRes.ok) {
-      const errBody = await transcriptRes.json().catch(() => ({}));
-      console.error('[Supadata] API error:', transcriptRes.status, errBody);
-
-      if (transcriptRes.status === 404) {
-        return NextResponse.json(
-          { error: 'No transcript available for this video. Captions may be disabled.' },
-          { status: 422 }
-        );
-      }
-      if (transcriptRes.status === 401) {
-        return NextResponse.json(
-          { error: 'Transcript service authentication failed.' },
-          { status: 500 }
-        );
-      }
-      throw new Error(`Supadata responded with ${transcriptRes.status}`);
+      console.error('[Harvest] Transcript service error:', transcriptData);
+      return NextResponse.json(
+        { error: transcriptData.detail ?? 'Transcript unavailable for this video.' },
+        { status: transcriptRes.status }
+      );
     }
 
-    const data = await transcriptRes.json();
-    const transcript: string = data.content ?? '';
+    const transcript: string = transcriptData.transcript ?? '';
 
-    if (!transcript || transcript.length < 100) {
+    if (!transcript || transcript.length < 50) {
       return NextResponse.json(
-        { error: 'Transcript is empty or too short (min 100 chars) to process.' },
+        { error: 'Transcript is empty or too short to process.' },
         { status: 422 }
       );
     }
 
-    // Fix: Use oEmbed title first, then Supadata title, fallback to AI generation
-    const sourceTitle = oEmbedTitle || data.title;
-    const generatedTitle = (sourceTitle && sourceTitle !== 'Unknown Title' && sourceTitle !== 'YouTube Video')
-      ? sourceTitle
-      : await generateStudySetTitle(transcript);
+    console.log('[Harvest] Transcript length:', transcript.length);
+
+    // Get video title from YouTube oEmbed (free, no auth needed)
+    const videoTitle = await getYouTubeTitle(videoId);
+    const title = videoTitle || 'YouTube Video';
+
+    console.log('[Harvest] Video title:', title);
+
+    // Save to database if studySetId provided
+    if (studySetId) {
+      await prisma.studySet.update({
+        where: { id: studySetId },
+        data: {
+          title,
+          rawContent: transcript,
+          rawContentType: 'youtube',
+          sourceUrl: url,
+          status: 'ready',
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         transcript,
-        title: generatedTitle,
+        title,
         wordCount: transcript.split(/\s+/).filter(Boolean).length,
         metadata: {
-          title: generatedTitle,
-          duration: data.duration ?? 0,
-          channel: data.channel ?? 'Unknown',
+          title,
+          duration: 0,
+          channel: 'Unknown',
           thumbnail: null,
           sourceUrl: url,
           extractedAt: new Date().toISOString(),
@@ -117,6 +127,14 @@ export async function POST(req: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[YouTube Harvester] Fatal:', message);
+
+    if (message.includes('fetch failed') || message.includes('ECONNREFUSED')) {
+      return NextResponse.json(
+        { error: 'Transcript service is temporarily unavailable. Please try again in 30 seconds.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Transcript extraction failed. Please try again.' },
       { status: 500 }
